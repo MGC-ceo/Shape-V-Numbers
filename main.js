@@ -157,7 +157,8 @@ function shoot(scene,t,e){
 function moveBullets(){
  for(let i = bullets.length - 1; i >= 0; i--){
   const b = bullets[i];
-
+  b.speed = Math.max(b.speed, b.e.speed + 1);
+  
   // Remove bullet if target gone
   if(!b.e || !enemies.includes(b.e)){
     b.body.destroy();
@@ -165,21 +166,26 @@ function moveBullets(){
     continue;
   }
 
-  const dx = b.e.x - b.x;
-  const dy = b.e.y - b.y;
-  const d = Math.hypot(dx,dy);
+ const dx = b.e.x - b.x;
+const dy = b.e.y - b.y;
+const d = Math.hypot(dx,dy);
 
-  b.x += (dx/d) * b.speed;
-  b.y += (dy/d) * b.speed;
-  b.body.setPosition(b.x,b.y);
-
-  if(d < 10){
-    hitEnemy(b.e, b.dmg);
-    b.body.destroy();
-    bullets.splice(i,1);
-  }
- }
+// Snap when very close
+if(d < 25){
+  b.x = b.e.x;
+  b.y = b.e.y;
 }
+
+b.x += (dx/d) * b.speed;
+b.y += (dy/d) * b.speed;
+b.body.setPosition(b.x,b.y);
+
+if(d < 18){
+  hitEnemy(b.e, b.dmg);
+  b.body.destroy();
+  bullets.splice(i,1);
+}
+
 
 // DAMAGE
 function hitEnemy(e,dmg){
