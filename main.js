@@ -6,9 +6,9 @@ const config={type:Phaser.AUTO,width:800,height:600,backgroundColor:"#111",scene
 new Phaser.Game(config);
 
 const SHAPES={
- circle:{dmg:2,rate:500,color:0x00ffcc,cost:30,range:120},
- square:{dmg:5,rate:1200,color:0xffaa00,cost:50,range:150},
- triangle:{dmg:1,rate:250,color:0xaa66ff,cost:20,range:100}
+ circle:{dmg:2,rate:600,color:0x00ffcc,cost:30,range:120},
+ square:{dmg:5,rate:1400,color:0xffaa00,cost:50,range:150},
+ triangle:{dmg:1,rate:450,color:0xaa66ff,cost:20,range:100}
 };
 
 const ENEMY_TYPES=[
@@ -21,7 +21,7 @@ const BOSS={hp:80,speed:0.35,color:0x00ffff,size:28};
 
 const path=[{x:0,y:300},{x:200,y:300},{x:400,y:200},{x:600,y:300},{x:800,y:300}];
 
-const MAX_BULLETS = 120;
+const MAX_BULLETS = 80;
 
 let enemies=[],towers=[],bullets=[];
 let wave=1,crystalHP=20,money=100,selectedShape="circle";
@@ -130,15 +130,19 @@ function placeTowerIfValid(scene,x,y){
 
 function towerShooting(scene){
  if(bullets.length > MAX_BULLETS) return;
+ if(enemies.length > 40) return;
 
  towers.forEach(t=>{
-  const now=Date.now();
-  if(now-t.last<t.rate) return;
+  const now = Date.now();
+  if(now - t.last < t.rate) return;
 
-  const target=enemies.find(e=>Phaser.Math.Distance.Between(t.x,t.y,e.x,e.y)<=t.range);
+  const target = enemies.find(e =>
+    Phaser.Math.Distance.Between(t.x,t.y,e.x,e.y) <= t.range
+  );
+
   if(!target) return;
 
-  t.last=now;
+  t.last = now;
   shoot(scene,t,target);
  });
 }
@@ -151,29 +155,31 @@ function shoot(scene,t,e){
 }
 
 function moveBullets(){
- bullets.forEach((b,i)=>{
-  // If enemy gone, delete bullet
+ for(let i = bullets.length - 1; i >= 0; i--){
+  const b = bullets[i];
+
+  // Remove bullet if target gone
   if(!b.e || !enemies.includes(b.e)){
     b.body.destroy();
     bullets.splice(i,1);
-    return;
+    continue;
   }
 
-  const dx=b.e.x-b.x, dy=b.e.y-b.y;
-  const d=Math.hypot(dx,dy);
+  const dx = b.e.x - b.x;
+  const dy = b.e.y - b.y;
+  const d = Math.hypot(dx,dy);
 
-  b.x+=(dx/d)*b.speed;
-  b.y+=(dy/d)*b.speed;
+  b.x += (dx/d) * b.speed;
+  b.y += (dy/d) * b.speed;
   b.body.setPosition(b.x,b.y);
 
-  if(d<10){
-   hitEnemy(b.e,b.dmg);
-   b.body.destroy();
-   bullets.splice(i,1);
+  if(d < 10){
+    hitEnemy(b.e, b.dmg);
+    b.body.destroy();
+    bullets.splice(i,1);
   }
- });
+ }
 }
-
 
 // DAMAGE
 function hitEnemy(e,dmg){
