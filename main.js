@@ -128,7 +128,8 @@ function moveBullets(){
   const b=bullets[i];
   if(!b.e||!enemies.includes(b.e)){b.body.destroy();bullets.splice(i,1);continue;}
   const dx=b.e.x-b.x,dy=b.e.y-b.y,d=Math.hypot(dx,dy);
-  if(d<18){hitEnemy(b.e,b.dmg);b.body.destroy();bullets.splice(i,1);continue;}
+ const hitDistance = 22; // bigger = more forgiving
+if(d <= hitDistance){hitEnemy(b.e,b.dmg);b.body.destroy();bullets.splice(i,1);continue;}
   const step=Math.min(b.speed,d);
   b.x+=(dx/d)*step; b.y+=(dy/d)*step;
   b.body.setPosition(b.x,b.y);
