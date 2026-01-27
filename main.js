@@ -157,7 +157,6 @@ function shoot(scene,t,e){
 function moveBullets(){
  for(let i = bullets.length - 1; i >= 0; i--){
   const b = bullets[i];
-  b.speed = Math.max(b.speed, b.e.speed + 1);
   
   // Remove bullet if target gone
   if(!b.e || !enemies.includes(b.e)){
@@ -166,25 +165,23 @@ function moveBullets(){
     continue;
   }
 
- const dx = b.e.x - b.x;
+const dx = b.e.x - b.x;
 const dy = b.e.y - b.y;
 const d = Math.hypot(dx,dy);
 
-// Snap when very close
-if(d < 25){
-  b.x = b.e.x;
-  b.y = b.e.y;
-}
-
-b.x += (dx/d) * b.speed;
-b.y += (dy/d) * b.speed;
-b.body.setPosition(b.x,b.y);
-
+// If already very close → count as hit
 if(d < 18){
   hitEnemy(b.e, b.dmg);
   b.body.destroy();
   bullets.splice(i,1);
+  continue;
 }
+
+// Move toward enemy but NEVER past it
+const step = Math.min(b.speed, d);
+b.x += (dx / d) * step;
+b.y += (dy / d) * step;
+b.body.setPosition(b.x, b.y);
 
 
 // DAMAGE
