@@ -3,31 +3,24 @@
 <head>
   <meta charset="UTF-8">
   <title>Shape Defense</title>
-
   <style>
     body { margin: 0; background: #000; overflow: hidden; }
-    #ui {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      z-index: 10;
-    }
+    #ui { position:absolute; top:10px; right:10px; z-index:10; }
+    button { margin:2px; }
   </style>
-
   <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.min.js"></script>
 </head>
 <body>
 
-  <div id="ui">
-    <button onclick="togglePause()">Pause</button>
-    <button onclick="restartGame()">Restart</button>
-    <button onclick="upgradeSelectedTower()">Upgrade</button>
-    <button onclick="sellSelectedTower()">Sell</button>
-    <button onclick="upgradeTowerPath('damage')">Damage</button>
-<button onclick="upgradeTowerPath('speed')">Speed</button>
-<button onclick="upgradeTowerPath('range')">Range</button>
-  </div>
+<div id="ui">
+  <button onclick="togglePause()">Pause</button>
+  <button onclick="restartGame()">Restart</button>
+  <button onclick="upgradeTowerPath('damage')">Damage</button>
+  <button onclick="upgradeTowerPath('speed')">Speed</button>
+  <button onclick="upgradeTowerPath('range')">Range</button>
+  <button onclick="sellSelectedTower()">Sell</button>
+</div>
 
-  <script src="main.js"></script>
+<script src="main.js"></script>
 </body>
 </html>
