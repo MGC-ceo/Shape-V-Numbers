@@ -124,44 +124,66 @@ function shoot(scene,t,e){
 }
 
 function moveBullets(){
- for(let i=bullets.length-1;i>=0;i--){
-  const b=bullets[i];
-  if(!b.e||!enemies.includes(b.e)){b.body.destroy();bullets.splice(i,1);continue;}
-const dx = b.e.x - b.x;
-const dy = b.e.y - b.y;
-const d = Math.hypot(dx,dy);
+  for(let i = bullets.length - 1; i >= 0; i--){
+    const b = bullets[i];
 
-const hitDistance = 22;
+    if(!b.e || !enemies.includes(b.e)){
+      b.body.destroy();
+      bullets.splice(i,1);
+      continue;
+    }
 
-// If already close enough → hit
-if(d <= hitDistance){
-  hitEnemy(b.e, b.dmg);
-  b.body.destroy();
-  bullets.splice(i,1);
-  continue;
+    const ex = b.e.x;
+    const ey = b.e.y;
+
+    const dx = ex - b.x;
+    const dy = ey - b.y;
+    const dist = Math.hypot(dx,dy);
+
+    const hitDistance = 22;
+
+    // Already close enough
+    if(dist <= hitDistance){
+      hitEnemy(b.e, b.dmg);
+      b.body.destroy();
+      bullets.splice(i,1);
+      continue;
+    }
+
+    // Store old position
+    const oldX = b.x;
+    const oldY = b.y;
+
+    // Move bullet
+    const step = Math.min(b.speed, dist);
+    b.x += (dx/dist) * step;
+    b.y += (dy/dist) * step;
+
+    // 🔥 Segment collision check
+    const vx = b.x - oldX;
+    const vy = b.y - oldY;
+
+    const wx = ex - oldX;
+    const wy = ey - oldY;
+
+    const proj = (wx*vx + wy*vy) / (vx*vx + vy*vy);
+    const t = Math.max(0, Math.min(1, proj));
+
+    const closestX = oldX + vx * t;
+    const closestY = oldY + vy * t;
+
+    const distToLine = Math.hypot(ex - closestX, ey - closestY);
+
+    if(distToLine <= hitDistance){
+      hitEnemy(b.e, b.dmg);
+      b.body.destroy();
+      bullets.splice(i,1);
+      continue;
+    }
+
+    b.body.setPosition(b.x, b.y);
+  }
 }
-
-// Move bullet
-const step = Math.min(b.speed, d);
-const oldX = b.x;
-const oldY = b.y;
-
-b.x += (dx/d) * step;
-b.y += (dy/d) * step;
-
-// 🔥 NEW: Check if we passed through the enemy
-const newDx = b.e.x - b.x;
-const newDy = b.e.y - b.y;
-const newD = Math.hypot(newDx,newDy);
-
-if(newD > d){ // bullet went past enemy
-  hitEnemy(b.e, b.dmg);
-  b.body.destroy();
-  bullets.splice(i,1);
-  continue;
-}
-
-b.body.setPosition(b.x,b.y);
 
 // DAMAGE
 function hitEnemy(e,dmg){
