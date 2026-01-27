@@ -1,3 +1,4 @@
+let abilityCooldowns = { bomb:0, freeze:0, cash:0 };
 let selectedTower = null;
 let selectedTowerRing = null;
 let previewRing;
@@ -22,6 +23,12 @@ const SHAPES = {
   square:   { dmg: 5, rate: 1200, color: 0xffaa00, cost: 50, range: 150 },
   triangle: { dmg: 1, rate: 250, color: 0xaa66ff, cost: 20, range: 100 }
 };
+
+const ENEMY_TYPES = [
+  { hp: 8, speed: 0.9, color: 0xffcc00 }, // fast
+  { hp: 15, speed: 0.5, color: 0xaa00ff }, // tank
+  { hp: 10, speed: 0.6, color: 0xff5555 }  // normal
+];
 
 const path = [
   { x: 0, y: 300 },
@@ -48,6 +55,37 @@ function preload(){}
 function create(){
   drawPath(this);
   
+  this.input.keyboard.on("keydown-Q", ()=> useBomb(this));
+this.input.keyboard.on("keydown-W", ()=> useFreeze());
+this.input.keyboard.on("keydown-E", ()=> useCash());
+
+  function useBomb(scene){
+  if(Date.now() < abilityCooldowns.bomb) return;
+  abilityCooldowns.bomb = Date.now() + 8000;
+
+  enemies.forEach(e => hitEnemy(e, 5));
+
+  const flash = scene.add.rectangle(400,300,800,600,0xffffff,0.2);
+  scene.time.delayedCall(200, ()=> flash.destroy());
+}
+  
+function useFreeze(){
+  if(Date.now() < abilityCooldowns.freeze) return;
+  abilityCooldowns.freeze = Date.now() + 10000;
+
+  enemies.forEach(e => e.speed *= 0.4);
+
+  setTimeout(()=> enemies.forEach(e => e.speed /= 0.4), 3000);
+}
+  
+function useCash(){
+  if(Date.now() < abilityCooldowns.cash) return;
+  abilityCooldowns.cash = Date.now() + 12000;
+
+  money += 40;
+  moneyText.setText("Money: " + money);
+}
+
   previewRing = this.add.circle(0, 0, SHAPES[selectedShape].range, 0xffffff, 0.05);
 previewRing.setStrokeStyle(1, 0xffffff, 0.3);
 previewRing.setVisible(false);
@@ -123,13 +161,23 @@ function drawPath(scene){
 // ---------- ENEMIES ----------
 
 function spawnWave(scene){
-  for(let i=0;i<wave+2;i++) spawnEnemy(scene, 8+wave);
+  for(let i=0;i<wave+2;i++) spawnEnemy(scene);
 }
 
-function spawnEnemy(scene,hp){
-  const e = { hp, index:0, x:path[0].x, y:path[0].y, speed:0.6 };
-  e.body = scene.add.circle(e.x,e.y,16,0xff5555);
-  e.text = scene.add.text(e.x-6,e.y-8,hp,{color:"#fff"});
+
+function spawnEnemy(scene){
+  const type = Phaser.Utils.Array.GetRandom(ENEMY_TYPES);
+  const e = { 
+    hp: type.hp + wave,
+    speed: type.speed,
+    index:0,
+    x:path[0].x,
+    y:path[0].y
+  };
+
+  e.body = scene.add.circle(e.x,e.y,16,type.color);
+  e.text = scene.add.text(e.x-6,e.y-8,e.hp,{color:"#fff"});
+
   enemies.push(e);
 }
 
@@ -152,7 +200,15 @@ function moveEnemies(){
 
 function placeTower(scene,x,y,type){
   const s = SHAPES[type];
-  const t = { x,y,dmg:s.dmg,rate:s.rate,last:0, range:s.range, level:1 };
+  const t = { 
+  x, y,
+  type,
+  dmg:s.dmg,
+  rate:s.rate,
+  last:0,
+  range:s.range,
+  level:1
+};
 
   t.body = scene.add.circle(x,y,14,s.color);
   t.body.setInteractive();
@@ -164,6 +220,21 @@ t.body.on("pointerdown", () => {
 
   towers.push(t);
   showTowerRange(scene, x, y, s.range);
+}
+
+function sellSelectedTower(){
+  if(!selectedTower) return;
+
+  const refund = Math.floor(SHAPES[selectedTower.type].cost * 0.6);
+
+  money += refund;
+  moneyText.setText("Money: " + money);
+
+  selectedTower.body.destroy();
+  towers = towers.filter(t => t !== selectedTower);
+
+  if(selectedTowerRing) selectedTowerRing.destroy();
+  selectedTower = null;
 }
 
 function upgradeSelectedTower(){
