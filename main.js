@@ -2,7 +2,14 @@ let paused=false;
 function togglePause(){paused=!paused;}
 function restartGame(){location.reload();}
 
-const config={type:Phaser.AUTO,width:800,height:600,backgroundColor:"#111",scene:{preload,create,update}};
+const config={
+  type:Phaser.AUTO,
+  width:800,
+  height:600,
+  backgroundColor:"#111",
+  physics:{default:"arcade"},
+  scene:{preload,create,update}
+};
 new Phaser.Game(config);
 
 const SHAPES={
@@ -118,72 +125,42 @@ function towerShooting(scene){
 
 // BULLETS
 function shoot(scene,t,e){
- const b={x:t.x,y:t.y,e,dmg:t.dmg,speed:4};
- b.body=scene.add.circle(b.x,b.y,6,0xffffff);
- bullets.push(b);
+  const b = scene.physics.add.circle(t.x, t.y, 6, 0xffffff);
+  b.target = e;
+  b.dmg = t.dmg;
+  bullets.push(b);
 }
 
 function moveBullets(){
-  for(let i = bullets.length - 1; i >= 0; i--){
-    const b = bullets[i];
-
-    if(!b.e || !enemies.includes(b.e)){
-      b.body.destroy();
+  bullets.forEach((b,i)=>{
+    if(!b.target || !enemies.includes(b.target)){
+      b.destroy();
       bullets.splice(i,1);
-      continue;
+      return;
     }
 
-    const ex = b.e.x;
-    const ey = b.e.y;
+    const dx = b.target.x - b.x;
+    const dy = b.target.y - b.y;
+    const angle = Math.atan2(dy,dx);
 
-    const dx = ex - b.x;
-    const dy = ey - b.y;
-    const dist = Math.hypot(dx,dy);
-
-    const hitDistance = 22;
-
-    // Already close enough
-    if(dist <= hitDistance){
-      hitEnemy(b.e, b.dmg);
-      b.body.destroy();
-      bullets.splice(i,1);
-      continue;
-    }
-
-    // Store old position
-    const oldX = b.x;
-    const oldY = b.y;
-
-    // Move bullet
-    const step = Math.min(b.speed, dist);
-    b.x += (dx/dist) * step;
-    b.y += (dy/dist) * step;
-
-    // 🔥 Segment collision check
-    const vx = b.x - oldX;
-    const vy = b.y - oldY;
-
-    const wx = ex - oldX;
-    const wy = ey - oldY;
-
-    const proj = (wx*vx + wy*vy) / (vx*vx + vy*vy);
-    const t = Math.max(0, Math.min(1, proj));
-
-    const closestX = oldX + vx * t;
-    const closestY = oldY + vy * t;
-
-    const distToLine = Math.hypot(ex - closestX, ey - closestY);
-
-    if(distToLine <= hitDistance){
-      hitEnemy(b.e, b.dmg);
-      b.body.destroy();
-      bullets.splice(i,1);
-      continue;
-    }
-
-    b.body.setPosition(b.x, b.y);
-  }
+    b.setVelocity(Math.cos(angle)*200, Math.sin(angle)*200);
+  });
 }
+
+this.physics.add.overlap(
+  bullets,
+  enemies.map(e=>e.body),
+  (bulletBody, enemyBody)=>{
+    const bullet = bullets.find(b=>b.body===bulletBody);
+    const enemy = enemies.find(e=>e.body===enemyBody);
+
+    if(!bullet || !enemy) return;
+
+    hitEnemy(enemy, bullet.dmg);
+    bullet.destroy();
+    bullets.splice(bullets.indexOf(bullet),1);
+  }
+);
 
 // DAMAGE
 function hitEnemy(e,dmg){
