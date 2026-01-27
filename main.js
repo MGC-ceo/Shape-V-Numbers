@@ -72,6 +72,27 @@ function create(){
   this.input.keyboard.on("keydown-Q", ()=> useBomb(this));
 this.input.keyboard.on("keydown-W", ()=> useFreeze());
 this.input.keyboard.on("keydown-E", ()=> useCash());
+this.input.keyboard.on("keydown-SPACE", ()=> useTowerUltimate(this));
+  
+function useTowerUltimate(scene){
+  if(!selectedTower) return;
+
+  const type = selectedTower.type;
+
+  if(type === "circle"){ // rapid fire
+    for(let i=0;i<5;i++){
+      setTimeout(()=> shoot(scene,selectedTower,enemies[0]), i*100);
+    }
+  }
+  else if(type === "square"){ // big blast
+    enemies.forEach(e=> hitEnemy(e, selectedTower.dmg * 3));
+  }
+  else if(type === "triangle"){ // chain
+    enemies.slice(0,3).forEach(e=> hitEnemy(e, selectedTower.dmg * 2));
+  }
+
+  showTowerRange(scene, selectedTower.x, selectedTower.y, selectedTower.range);
+}
 
   function useBomb(scene){
   if(Date.now() < abilityCooldowns.bomb) return;
@@ -155,6 +176,7 @@ this.input.keyboard.on("keydown-THREE", ()=>{
 function update(){
   if(paused) return;
   moveEnemies();
+  checkEnemyMerges(this);
   towerShooting(this);
   moveBullets();
 }
@@ -176,6 +198,22 @@ function drawPath(scene){
   drawSinglePath(scene, path2, 0x333333);
 }
 
+function checkEnemyMerges(scene){
+  for(let i=0;i<enemies.length;i++){
+    for(let j=i+1;j<enemies.length;j++){
+      const a = enemies[i];
+      const b = enemies[j];
+
+      // Only merge if near center zone
+      if(Phaser.Math.Distance.Between(a.x,a.y,400,300) > 50) continue;
+
+      if(Phaser.Math.Distance.Between(a.x,a.y,b.x,b.y) < 20){
+        mergeEnemies(scene, a, b);
+        return; // one merge per frame is enough
+      }
+    }
+  }
+}
 
 // ---------- ENEMIES ----------
 
@@ -193,12 +231,22 @@ function spawnBoss(scene){
     index: 0,
     x: path[0].x,
     y: path[0].y
+    e.isBoss = true;
   };
 
   e.body = scene.add.circle(e.x, e.y, BOSS.size, BOSS.color);
   e.text = scene.add.text(e.x-10, e.y-12, e.hp, {color:"#000"});
 
   enemies.push(e);
+}
+
+function bossAbility(scene, boss){
+  const effect = scene.add.circle(boss.x,boss.y,60,0xff0000,0.2);
+  scene.time.delayedCall(300, ()=> effect.destroy());
+
+  // Speed burst
+  boss.speed *= 2;
+  scene.time.delayedCall(1000, ()=> boss.speed /= 2);
 }
 
 function spawnEnemy(scene, chosenPath){
@@ -233,11 +281,38 @@ function moveEnemies(){
     const dx = next.x-e.x, dy = next.y-e.y, d=Math.hypot(dx,dy);
     e.x += (dx/d)*e.speed;
     e.y += (dy/d)*e.speed;
-
+    
+    if(e.isBoss && Math.random() < 0.002){
+  bossAbility(scene, e);
+}
     e.body.setPosition(e.x,e.y);
     e.text.setPosition(e.x-6,e.y-8);
     if(d<4) e.index++;
   });
+}
+
+function mergeEnemies(scene,a,b){
+  const newHP = a.hp + b.hp;
+  const newSpeed = Math.min(a.speed, b.speed) * 0.9;
+
+  a.body.destroy(); a.text.destroy();
+  b.body.destroy(); b.text.destroy();
+
+  enemies = enemies.filter(e => e!==a && e!==b);
+
+  const merged = {
+    hp:newHP,
+    speed:newSpeed,
+    index: Math.max(a.index,b.index),
+    path:a.path,
+    x:a.x,
+    y:a.y
+  };
+
+  merged.body = scene.add.circle(merged.x,merged.y,22,0xff00ff);
+  merged.text = scene.add.text(merged.x-10,merged.y-12,newHP,{color:"#000"});
+
+  enemies.push(merged);
 }
 
 // ---------- TOWERS ----------
@@ -367,6 +442,13 @@ function shoot(scene,t,e){
   const b={x:t.x,y:t.y,e,dmg:t.dmg,speed:4};
   b.body=scene.add.circle(b.x,b.y,6,0xffffff);
   bullets.push(b);
+  scene.tweens.add({
+  targets: b.body,
+  alpha: 0.7,
+  yoyo: true,
+  repeat: -1,
+  duration: 200
+});
 }
 
 function moveBullets(){
@@ -390,6 +472,10 @@ function hitEnemy(e,dmg){
   e.hp-=dmg;
   e.text.setText(e.hp);
   e.body.scale*=0.95;
+  const flash = e.body.scene.add.circle(e.x,e.y,20,0xffffff,0.2);
+e.body.scene.time.delayedCall(100,()=>flash.destroy());
+const boom = e.body.scene.add.circle(e.x,e.y,25,0xffaa00,0.3);
+e.body.scene.time.delayedCall(150,()=>boom.destroy());
 
   if(e.hp<=0){
     e.body.destroy(); e.text.destroy();
