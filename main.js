@@ -21,6 +21,8 @@ const BOSS={hp:80,speed:0.35,color:0x00ffff,size:28};
 
 const path=[{x:0,y:300},{x:200,y:300},{x:400,y:200},{x:600,y:300},{x:800,y:300}];
 
+const MAX_BULLETS = 120;
+
 let enemies=[],towers=[],bullets=[];
 let wave=1,crystalHP=20,money=100,selectedShape="circle";
 let selectedTower=null,selectedTowerRing=null,previewRing;
@@ -66,8 +68,10 @@ function drawPath(scene){
 
 // ENEMIES
 function spawnWave(scene){
- if(wave%5===0)spawnBoss(scene);
- else for(let i=0;i<wave+2;i++)spawnEnemy(scene);
+ if(enemies.length > 25) return; // STOP if too many alive
+
+ if(wave%5===0) spawnBoss(scene);
+ else for(let i=0;i<wave+2;i++) spawnEnemy(scene);
 }
 
 function spawnEnemy(scene){
@@ -125,11 +129,15 @@ function placeTowerIfValid(scene,x,y){
 }
 
 function towerShooting(scene){
+ if(bullets.length > MAX_BULLETS) return;
+
  towers.forEach(t=>{
   const now=Date.now();
-  if(now-t.last<t.rate)return;
+  if(now-t.last<t.rate) return;
+
   const target=enemies.find(e=>Phaser.Math.Distance.Between(t.x,t.y,e.x,e.y)<=t.range);
-  if(!target)return;
+  if(!target) return;
+
   t.last=now;
   shoot(scene,t,target);
  });
@@ -144,11 +152,20 @@ function shoot(scene,t,e){
 
 function moveBullets(){
  bullets.forEach((b,i)=>{
-  if(!b.e)return;
-  const dx=b.e.x-b.x,dy=b.e.y-b.y,d=Math.hypot(dx,dy);
+  // If enemy gone, delete bullet
+  if(!b.e || !enemies.includes(b.e)){
+    b.body.destroy();
+    bullets.splice(i,1);
+    return;
+  }
+
+  const dx=b.e.x-b.x, dy=b.e.y-b.y;
+  const d=Math.hypot(dx,dy);
+
   b.x+=(dx/d)*b.speed;
   b.y+=(dy/d)*b.speed;
   b.body.setPosition(b.x,b.y);
+
   if(d<10){
    hitEnemy(b.e,b.dmg);
    b.body.destroy();
@@ -157,15 +174,17 @@ function moveBullets(){
  });
 }
 
+
 // DAMAGE
 function hitEnemy(e,dmg){
  e.hp-=dmg;
  e.text.setText(e.hp);
  e.body.scale*=0.95;
+
  if(e.hp<=0){
   e.body.destroy();
   e.text.destroy();
-  enemies=enemies.filter(x=>x!==e);
+  enemies = enemies.filter(x=>x!==e);
   money+=10;
   moneyText.setText("Money: "+money);
  }
