@@ -1,3 +1,4 @@
+let previewRing;
 let paused = false;
 function togglePause(){ paused = !paused; }
 function restartGame(){ location.reload(); }
@@ -15,9 +16,9 @@ new Phaser.Game(config);
 // ---------- DATA ----------
 
 const SHAPES = {
-  circle:   { dmg: 2, rate: 500, color: 0x00ffcc, cost: 30 },
-  square:   { dmg: 5, rate: 1200, color: 0xffaa00, cost: 50 },
-  triangle: { dmg: 1, rate: 250, color: 0xaa66ff, cost: 20 }
+  circle:   { dmg: 2, rate: 500, color: 0x00ffcc, cost: 30, range: 120 },
+  square:   { dmg: 5, rate: 1200, color: 0xffaa00, cost: 50, range: 150 },
+  triangle: { dmg: 1, rate: 250, color: 0xaa66ff, cost: 20, range: 100 }
 };
 
 const path = [
@@ -44,6 +45,15 @@ function preload(){}
 
 function create(){
   drawPath(this);
+  
+  previewRing = this.add.circle(0, 0, SHAPES[selectedShape].range, 0xffffff, 0.05);
+previewRing.setStrokeStyle(1, 0xffffff, 0.3);
+previewRing.setVisible(false);
+  
+this.input.on("pointermove", p => {
+  previewRing.setVisible(true);
+  previewRing.setPosition(p.x, p.y);
+});
 
   this.crystal = this.add.circle(750, 300, 25, 0x00aaff);
 
@@ -53,9 +63,24 @@ function create(){
   shapeText = this.add.text(10, 70, "Selected: CIRCLE", { color: "#fff" });
 
   // Key controls
-  this.input.keyboard.on("keydown-ONE", ()=>{ selectedShape="circle"; shapeText.setText("Selected: CIRCLE"); });
-  this.input.keyboard.on("keydown-TWO", ()=>{ selectedShape="square"; shapeText.setText("Selected: SQUARE"); });
-  this.input.keyboard.on("keydown-THREE", ()=>{ selectedShape="triangle"; shapeText.setText("Selected: TRIANGLE"); });
+this.input.keyboard.on("keydown-ONE", ()=>{
+  selectedShape="circle";
+  shapeText.setText("Selected: CIRCLE");
+  previewRing.setRadius(SHAPES.circle.range);
+});
+
+this.input.keyboard.on("keydown-TWO", ()=>{
+  selectedShape="square";
+  shapeText.setText("Selected: SQUARE");
+  previewRing.setRadius(SHAPES.square.range);
+});
+
+this.input.keyboard.on("keydown-THREE", ()=>{
+  selectedShape="triangle";
+  shapeText.setText("Selected: TRIANGLE");
+  previewRing.setRadius(SHAPES.triangle.range);
+});
+
 
   // Click placement
   this.input.on("pointerdown", p => placeTowerIfValid(this, p.x, p.y));
@@ -125,9 +150,11 @@ function moveEnemies(){
 
 function placeTower(scene,x,y,type){
   const s = SHAPES[type];
-  const t = { x,y,dmg:s.dmg,rate:s.rate,last:0 };
+  const t = { x,y,dmg:s.dmg,rate:s.rate,last:0, range:s.range };
   t.body = scene.add.circle(x,y,14,s.color);
   towers.push(t);
+
+  showTowerRange(scene, x, y, s.range);
 }
 
 function placeTowerIfValid(scene,x,y){
@@ -147,11 +174,25 @@ function placeTowerIfValid(scene,x,y){
 
 function towerShooting(scene){
   towers.forEach(t=>{
-    const now=Date.now();
-    if(now-t.last<t.rate || enemies.length===0) return;
-    t.last=now;
-    shoot(scene,t,enemies[0]);
+    const now = Date.now();
+    if(now - t.last < t.rate) return;
+
+    const target = enemies.find(e =>
+      Phaser.Math.Distance.Between(t.x, t.y, e.x, e.y) <= t.range
+    );
+
+    if(!target) return;
+
+    t.last = now;
+    shoot(scene, t, target);
   });
+}
+
+function showTowerRange(scene, x, y, range){
+  const ring = scene.add.circle(x, y, range, 0xffffff, 0.08);
+  ring.setStrokeStyle(2, 0xffffff, 0.4);
+
+  scene.time.delayedCall(600, () => ring.destroy());
 }
 
 // ---------- BULLETS ----------
