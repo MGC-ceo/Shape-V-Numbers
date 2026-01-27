@@ -127,14 +127,41 @@ function moveBullets(){
  for(let i=bullets.length-1;i>=0;i--){
   const b=bullets[i];
   if(!b.e||!enemies.includes(b.e)){b.body.destroy();bullets.splice(i,1);continue;}
-  const dx=b.e.x-b.x,dy=b.e.y-b.y,d=Math.hypot(dx,dy);
- const hitDistance = 22; // bigger = more forgiving
-if(d <= hitDistance){hitEnemy(b.e,b.dmg);b.body.destroy();bullets.splice(i,1);continue;}
-  const step=Math.min(b.speed,d);
-  b.x+=(dx/d)*step; b.y+=(dy/d)*step;
-  b.body.setPosition(b.x,b.y);
- }
+const dx = b.e.x - b.x;
+const dy = b.e.y - b.y;
+const d = Math.hypot(dx,dy);
+
+const hitDistance = 22;
+
+// If already close enough → hit
+if(d <= hitDistance){
+  hitEnemy(b.e, b.dmg);
+  b.body.destroy();
+  bullets.splice(i,1);
+  continue;
 }
+
+// Move bullet
+const step = Math.min(b.speed, d);
+const oldX = b.x;
+const oldY = b.y;
+
+b.x += (dx/d) * step;
+b.y += (dy/d) * step;
+
+// 🔥 NEW: Check if we passed through the enemy
+const newDx = b.e.x - b.x;
+const newDy = b.e.y - b.y;
+const newD = Math.hypot(newDx,newDy);
+
+if(newD > d){ // bullet went past enemy
+  hitEnemy(b.e, b.dmg);
+  b.body.destroy();
+  bullets.splice(i,1);
+  continue;
+}
+
+b.body.setPosition(b.x,b.y);
 
 // DAMAGE
 function hitEnemy(e,dmg){
