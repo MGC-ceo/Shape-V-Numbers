@@ -1,3 +1,4 @@
+let selectedTowerRing = null;
 let previewRing;
 let paused = false;
 function togglePause(){ paused = !paused; }
@@ -150,11 +151,33 @@ function moveEnemies(){
 
 function placeTower(scene,x,y,type){
   const s = SHAPES[type];
-  const t = { x,y,dmg:s.dmg,rate:s.rate,last:0, range:s.range };
-  t.body = scene.add.circle(x,y,14,s.color);
-  towers.push(t);
+  const t = { x,y,dmg:s.dmg,rate:s.rate,last:0, range:s.range, level:1 };
 
+  t.body = scene.add.circle(x,y,14,s.color);
+  t.body.setInteractive();
+
+  t.body.on("pointerdown", () => {
+    showSelectedTowerRange(scene, t);
+  });
+
+  towers.push(t);
   showTowerRange(scene, x, y, s.range);
+}
+
+function getUpgradeCost(level){
+  return 40 + level * 30;
+}
+
+function showSelectedTowerRange(scene, tower){
+  if(selectedTowerRing) selectedTowerRing.destroy();
+
+  selectedTowerRing = scene.add.circle(tower.x, tower.y, tower.range, 0xffffff, 0.07);
+  selectedTowerRing.setStrokeStyle(2, 0xffffff, 0.6);
+
+  scene.time.delayedCall(1500, () => {
+    if(selectedTowerRing) selectedTowerRing.destroy();
+    selectedTowerRing = null;
+  });
 }
 
 function placeTowerIfValid(scene,x,y){
