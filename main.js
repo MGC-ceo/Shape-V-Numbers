@@ -1,504 +1,202 @@
-let abilityCooldowns = { bomb:0, freeze:0, cash:0 };
-let selectedTower = null;
-let selectedTowerRing = null;
-let previewRing;
-let paused = false;
-function togglePause(){ paused = !paused; }
-function restartGame(){ location.reload(); }
+let paused=false;
+function togglePause(){paused=!paused;}
+function restartGame(){location.reload();}
 
-const config = {
-  type: Phaser.AUTO,
-  width: 800,
-  height: 600,
-  backgroundColor: "#111",
-  scene: { preload, create, update }
-};
-
+const config={type:Phaser.AUTO,width:800,height:600,backgroundColor:"#111",scene:{preload,create,update}};
 new Phaser.Game(config);
 
-// ---------- DATA ----------
-
-const SHAPES = {
-  circle:   { dmg: 2, rate: 500, color: 0x00ffcc, cost: 30, range: 120 },
-  square:   { dmg: 5, rate: 1200, color: 0xffaa00, cost: 50, range: 150 },
-  triangle: { dmg: 1, rate: 250, color: 0xaa66ff, cost: 20, range: 100 }
+const SHAPES={
+ circle:{dmg:2,rate:500,color:0x00ffcc,cost:30,range:120},
+ square:{dmg:5,rate:1200,color:0xffaa00,cost:50,range:150},
+ triangle:{dmg:1,rate:250,color:0xaa66ff,cost:20,range:100}
 };
 
-const ENEMY_TYPES = [
-  { hp: 8, speed: 0.9, color: 0xffcc00 }, // fast
-  { hp: 15, speed: 0.5, color: 0xaa00ff }, // tank
-  { hp: 10, speed: 0.6, color: 0xff5555 }  // normal
+const ENEMY_TYPES=[
+ {hp:8,speed:0.9,color:0xffcc00},
+ {hp:15,speed:0.5,color:0xaa00ff},
+ {hp:10,speed:0.6,color:0xff5555}
 ];
 
-const BOSS = {
-  hp: 80,
-  speed: 0.35,
-  color: 0x00ffff,
-  size: 28
-};
+const BOSS={hp:80,speed:0.35,color:0x00ffff,size:28};
 
-const path = [
-  { x: 0, y: 300 },
-  { x: 200, y: 300 },
-  { x: 400, y: 200 },
-  { x: 600, y: 300 },
-  { x: 800, y: 300 }
-];
-const path2 = [
-  { x: 0, y: 450 },
-  { x: 250, y: 450 },
-  { x: 400, y: 350 },
-  { x: 600, y: 300 },
-  { x: 750, y: 300 }
-];
+const path=[{x:0,y:300},{x:200,y:300},{x:400,y:200},{x:600,y:300},{x:800,y:300}];
 
-let enemies = [];
-let towers = [];
-let bullets = [];
-let wave = 1;
-let crystalHP = 20;
-let money = 100;
-let selectedShape = "circle";
-
-let moneyText, waveText, hpText, shapeText;
-
-// ---------- PHASER ----------
+let enemies=[],towers=[],bullets=[];
+let wave=1,crystalHP=20,money=100,selectedShape="circle";
+let selectedTower=null,selectedTowerRing=null,previewRing;
+let moneyText,waveText,hpText,shapeText;
 
 function preload(){}
 
 function create(){
-  drawPath(this);
-  
-  this.input.keyboard.on("keydown-Q", ()=> useBomb(this));
-this.input.keyboard.on("keydown-W", ()=> useFreeze());
-this.input.keyboard.on("keydown-E", ()=> useCash());
-this.input.keyboard.on("keydown-SPACE", ()=> useTowerUltimate(this));
-  
-function useTowerUltimate(scene){
-  if(!selectedTower) return;
+ drawPath(this);
+ this.crystal=this.add.circle(750,300,25,0x00aaff);
 
-  const type = selectedTower.type;
+ hpText=this.add.text(650,340,"Crystal: 20",{color:"#fff"});
+ waveText=this.add.text(10,10,"Wave: 1",{color:"#fff"});
+ moneyText=this.add.text(10,40,"Money: 100",{color:"#fff"});
+ shapeText=this.add.text(10,70,"Selected: CIRCLE",{color:"#fff"});
 
-  if(type === "circle"){ // rapid fire
-    for(let i=0;i<5;i++){
-      setTimeout(()=> shoot(scene,selectedTower,enemies[0]), i*100);
-    }
-  }
-  else if(type === "square"){ // big blast
-    enemies.forEach(e=> hitEnemy(e, selectedTower.dmg * 3));
-  }
-  else if(type === "triangle"){ // chain
-    enemies.slice(0,3).forEach(e=> hitEnemy(e, selectedTower.dmg * 2));
-  }
+ previewRing=this.add.circle(0,0,SHAPES[selectedShape].range,0xffffff,0.05).setStrokeStyle(1,0xffffff,0.3).setVisible(false);
 
-  showTowerRange(scene, selectedTower.x, selectedTower.y, selectedTower.range);
+ this.input.on("pointermove",p=>{previewRing.setVisible(true).setPosition(p.x,p.y);});
+ this.input.on("pointerdown",p=>placeTowerIfValid(this,p.x,p.y));
+
+ this.input.keyboard.on("keydown-ONE",()=>selectShape("circle"));
+ this.input.keyboard.on("keydown-TWO",()=>selectShape("square"));
+ this.input.keyboard.on("keydown-THREE",()=>selectShape("triangle"));
+
+ spawnWave(this);
+ this.time.addEvent({delay:8000,loop:true,callback:()=>{wave++;waveText.setText("Wave: "+wave);spawnWave(this);}});
 }
 
-  function useBomb(scene){
-  if(Date.now() < abilityCooldowns.bomb) return;
-  abilityCooldowns.bomb = Date.now() + 8000;
+function update(){if(paused)return;moveEnemies();towerShooting(this);moveBullets();}
 
-  enemies.forEach(e => hitEnemy(e, 5));
-
-  const flash = scene.add.rectangle(400,300,800,600,0xffffff,0.2);
-  scene.time.delayedCall(200, ()=> flash.destroy());
-}
-  
-function useFreeze(){
-  if(Date.now() < abilityCooldowns.freeze) return;
-  abilityCooldowns.freeze = Date.now() + 10000;
-
-  enemies.forEach(e => e.speed *= 0.4);
-
-  setTimeout(()=> enemies.forEach(e => e.speed /= 0.4), 3000);
-}
-  
-function useCash(){
-  if(Date.now() < abilityCooldowns.cash) return;
-  abilityCooldowns.cash = Date.now() + 12000;
-
-  money += 40;
-  moneyText.setText("Money: " + money);
-}
-
-  previewRing = this.add.circle(0, 0, SHAPES[selectedShape].range, 0xffffff, 0.05);
-previewRing.setStrokeStyle(1, 0xffffff, 0.3);
-previewRing.setVisible(false);
-  
-this.input.on("pointermove", p => {
-  previewRing.setVisible(true);
-  previewRing.setPosition(p.x, p.y);
-});
-
-  this.crystal = this.add.circle(750, 300, 25, 0x00aaff);
-
-  hpText = this.add.text(650, 340, "Crystal: 20", { color: "#fff" });
-  waveText = this.add.text(10, 10, "Wave: 1", { color: "#fff" });
-  moneyText = this.add.text(10, 40, "Money: 100", { color: "#fff" });
-  shapeText = this.add.text(10, 70, "Selected: CIRCLE", { color: "#fff" });
-
-  // Key controls
-this.input.keyboard.on("keydown-ONE", ()=>{
-  selectedShape="circle";
-  shapeText.setText("Selected: CIRCLE");
-  previewRing.setRadius(SHAPES.circle.range);
-});
-
-this.input.keyboard.on("keydown-TWO", ()=>{
-  selectedShape="square";
-  shapeText.setText("Selected: SQUARE");
-  previewRing.setRadius(SHAPES.square.range);
-});
-
-this.input.keyboard.on("keydown-THREE", ()=>{
-  selectedShape="triangle";
-  shapeText.setText("Selected: TRIANGLE");
-  previewRing.setRadius(SHAPES.triangle.range);
-});
-
-
-  // Click placement
-  this.input.on("pointerdown", p => placeTowerIfValid(this, p.x, p.y));
-
-  spawnWave(this);
-
-  this.time.addEvent({
-    delay: 8000,
-    loop: true,
-    callback: ()=>{
-      wave++;
-      waveText.setText("Wave: " + wave);
-      spawnWave(this);
-    }
-  });
-}
-
-function update(){
-  if(paused) return;
-  moveEnemies();
-  checkEnemyMerges(this);
-  towerShooting(this);
-  moveBullets();
-}
-
-// ---------- PATH DRAWING ----------
-
-function drawSinglePath(scene, p, color=0x444444){
-  const g = scene.add.graphics();
-  g.lineStyle(20, color, 1);
-  g.beginPath();
-  g.moveTo(p[0].x, p[0].y);
-  for(let i=1;i<p.length;i++) g.lineTo(p[i].x, p[i].y);
-  g.strokePath();
-  p.forEach(pt=> scene.add.circle(pt.x, pt.y, 6, 0x888888));
-}
-
+// PATH
 function drawPath(scene){
-  drawSinglePath(scene, path);
-  drawSinglePath(scene, path2, 0x333333);
+ const g=scene.add.graphics();g.lineStyle(20,0x444444,1);
+ g.beginPath();g.moveTo(path[0].x,path[0].y);
+ for(let i=1;i<path.length;i++)g.lineTo(path[i].x,path[i].y);
+ g.strokePath();path.forEach(p=>scene.add.circle(p.x,p.y,6,0x888888));
 }
 
-function checkEnemyMerges(scene){
-  for(let i=0;i<enemies.length;i++){
-    for(let j=i+1;j<enemies.length;j++){
-      const a = enemies[i];
-      const b = enemies[j];
-
-      // Only merge if near center zone
-      if(Phaser.Math.Distance.Between(a.x,a.y,400,300) > 50) continue;
-
-      if(Phaser.Math.Distance.Between(a.x,a.y,b.x,b.y) < 20){
-        mergeEnemies(scene, a, b);
-        return; // one merge per frame is enough
-      }
-    }
-  }
-}
-
-// ---------- ENEMIES ----------
-
+// ENEMIES
 function spawnWave(scene){
-  for(let i=0;i<wave+1;i++){
-    spawnEnemy(scene, path);
-    spawnEnemy(scene, path2);
-  }
+ if(wave%5===0)spawnBoss(scene);
+ else for(let i=0;i<wave+2;i++)spawnEnemy(scene);
+}
+
+function spawnEnemy(scene){
+ const type=Phaser.Utils.Array.GetRandom(ENEMY_TYPES);
+ const e={hp:type.hp+wave,speed:type.speed,index:0,x:path[0].x,y:path[0].y};
+ e.body=scene.add.circle(e.x,e.y,16,type.color);
+ e.text=scene.add.text(e.x-6,e.y-8,e.hp,{color:"#fff"});
+ enemies.push(e);
 }
 
 function spawnBoss(scene){
-  const e = {
-    hp: BOSS.hp + wave * 2,
-    speed: BOSS.speed,
-    index: 0,
-    x: path[0].x,
-    y: path[0].y
-    e.isBoss = true;
-  };
-
-  e.body = scene.add.circle(e.x, e.y, BOSS.size, BOSS.color);
-  e.text = scene.add.text(e.x-10, e.y-12, e.hp, {color:"#000"});
-
-  enemies.push(e);
-}
-
-function bossAbility(scene, boss){
-  const effect = scene.add.circle(boss.x,boss.y,60,0xff0000,0.2);
-  scene.time.delayedCall(300, ()=> effect.destroy());
-
-  // Speed burst
-  boss.speed *= 2;
-  scene.time.delayedCall(1000, ()=> boss.speed /= 2);
-}
-
-function spawnEnemy(scene, chosenPath){
-  const type = Phaser.Utils.Array.GetRandom(ENEMY_TYPES);
-
-  const e = { 
-    hp: type.hp + wave,
-    speed: type.speed,
-    index:0,
-    path: chosenPath,
-    x: chosenPath[0].x,
-    y: chosenPath[0].y
-  };
-
-  e.body = scene.add.circle(e.x,e.y,16,type.color);
-  e.text = scene.add.text(e.x-6,e.y-8,e.hp,{color:"#fff"});
-
-  enemies.push(e);
-}
-
-  e.body = scene.add.circle(e.x,e.y,16,type.color);
-  e.text = scene.add.text(e.x-6,e.y-8,e.hp,{color:"#fff"});
-
-  enemies.push(e);
+ const e={hp:BOSS.hp+wave*2,speed:BOSS.speed,index:0,x:path[0].x,y:path[0].y,isBoss:true};
+ e.body=scene.add.circle(e.x,e.y,BOSS.size,BOSS.color);
+ e.text=scene.add.text(e.x-10,e.y-12,e.hp,{color:"#000"});
+ enemies.push(e);
 }
 
 function moveEnemies(){
-  enemies.forEach((e,i)=>{
-    const next = e.path[e.index+1];
-    if(!next){ damageCrystal(i); return; }
-
-    const dx = next.x-e.x, dy = next.y-e.y, d=Math.hypot(dx,dy);
-    e.x += (dx/d)*e.speed;
-    e.y += (dy/d)*e.speed;
-    
-    if(e.isBoss && Math.random() < 0.002){
-  bossAbility(scene, e);
-}
-    e.body.setPosition(e.x,e.y);
-    e.text.setPosition(e.x-6,e.y-8);
-    if(d<4) e.index++;
-  });
+ enemies.forEach((e,i)=>{
+  const next=path[e.index+1];
+  if(!next){damageCrystal(i);return;}
+  const dx=next.x-e.x,dy=next.y-e.y,d=Math.hypot(dx,dy);
+  e.x+=(dx/d)*e.speed;e.y+=(dy/d)*e.speed;
+  e.body.setPosition(e.x,e.y);e.text.setPosition(e.x-6,e.y-8);
+  if(d<4)e.index++;
+ });
 }
 
-function mergeEnemies(scene,a,b){
-  const newHP = a.hp + b.hp;
-  const newSpeed = Math.min(a.speed, b.speed) * 0.9;
-
-  a.body.destroy(); a.text.destroy();
-  b.body.destroy(); b.text.destroy();
-
-  enemies = enemies.filter(e => e!==a && e!==b);
-
-  const merged = {
-    hp:newHP,
-    speed:newSpeed,
-    index: Math.max(a.index,b.index),
-    path:a.path,
-    x:a.x,
-    y:a.y
-  };
-
-  merged.body = scene.add.circle(merged.x,merged.y,22,0xff00ff);
-  merged.text = scene.add.text(merged.x-10,merged.y-12,newHP,{color:"#000"});
-
-  enemies.push(merged);
-}
-
-// ---------- TOWERS ----------
+// TOWERS
+function selectShape(type){selectedShape=type;shapeText.setText("Selected: "+type.toUpperCase());previewRing.setRadius(SHAPES[type].range);}
 
 function placeTower(scene,x,y,type){
-  const s = SHAPES[type];
-const t = { 
-  x, y, type,
-  dmg:s.dmg,
-  rate:s.rate,
-  last:0,
-  range:s.range,
-  level:1,
-  path:null
-};
-
-  t.body = scene.add.circle(x,y,14,s.color);
-  t.body.setInteractive();
-
-t.body.on("pointerdown", () => {
-  selectedTower = t;
-  showSelectedTowerRange(scene, t);
-});
-
-  towers.push(t);
-  showTowerRange(scene, x, y, s.range);
-}
-
-function sellSelectedTower(){
-  if(!selectedTower) return;
-
-  const refund = Math.floor(SHAPES[selectedTower.type].cost * 0.6);
-
-  money += refund;
-  moneyText.setText("Money: " + money);
-
-  selectedTower.body.destroy();
-  towers = towers.filter(t => t !== selectedTower);
-
-  if(selectedTowerRing) selectedTowerRing.destroy();
-  selectedTower = null;
-}
-
-function upgradeTowerPath(pathType){
-  if(!selectedTower) return;
-
-  const cost = getUpgradeCost(selectedTower.level);
-  if(money < cost) return;
-
-  money -= cost;
-  moneyText.setText("Money: " + money);
-
-  selectedTower.level++;
-  selectedTower.path = pathType;
-
-  if(pathType === "damage"){
-    selectedTower.dmg += 2;
-  }
-  else if(pathType === "speed"){
-    selectedTower.rate *= 0.8;
-  }
-  else if(pathType === "range"){
-    selectedTower.range += 20;
-  }
-
-  showTowerRange(game.scene.scenes[0], selectedTower.x, selectedTower.y, selectedTower.range);
-}
-
-
-function getUpgradeCost(level){
-  return 40 + level * 30;
-}
-
-function showSelectedTowerRange(scene, tower){
-  if(selectedTowerRing) selectedTowerRing.destroy();
-
-  selectedTowerRing = scene.add.circle(tower.x, tower.y, tower.range, 0xffffff, 0.07);
-  selectedTowerRing.setStrokeStyle(2, 0xffffff, 0.6);
-
-  scene.time.delayedCall(1500, () => {
-    if(selectedTowerRing) selectedTowerRing.destroy();
-    selectedTowerRing = null;
-  });
+ const s=SHAPES[type];
+ const t={x,y,type,dmg:s.dmg,rate:s.rate,last:0,range:s.range,level:1,path:null};
+ t.body=scene.add.circle(x,y,14,s.color).setInteractive();
+ t.body.on("pointerdown",()=>{selectedTower=t;showSelectedTowerRange(scene,t);});
+ towers.push(t);showTowerRange(scene,x,y,s.range);
 }
 
 function placeTowerIfValid(scene,x,y){
-  const cost = SHAPES[selectedShape].cost;
-  if(money < cost) return;
-
-  for(let p of path)
-    if(Phaser.Math.Distance.Between(x,y,p.x,p.y)<40) return;
-
-  for(let t of towers)
-    if(Phaser.Math.Distance.Between(x,y,t.x,t.y)<30) return;
-
-  money -= cost;
-  moneyText.setText("Money: "+money);
-  placeTower(scene,x,y,selectedShape);
+ const cost=SHAPES[selectedShape].cost;if(money<cost)return;
+ for(let p of path)if(Phaser.Math.Distance.Between(x,y,p.x,p.y)<40)return;
+ for(let t of towers)if(Phaser.Math.Distance.Between(x,y,t.x,t.y)<30)return;
+ money-=cost;moneyText.setText("Money: "+money);
+ placeTower(scene,x,y,selectedShape);
 }
 
 function towerShooting(scene){
-  towers.forEach(t=>{
-    const now = Date.now();
-    if(now - t.last < t.rate) return;
-
-    const target = enemies.find(e =>
-      Phaser.Math.Distance.Between(t.x, t.y, e.x, e.y) <= t.range
-    );
-
-    if(!target) return;
-
-    t.last = now;
-    shoot(scene, t, target);
-  });
+ towers.forEach(t=>{
+  const now=Date.now();if(now-t.last<t.rate)return;
+  const target=enemies.find(e=>Phaser.Math.Distance.Between(t.x,t.y,e.x,e.y)<=t.range);
+  if(!target)return;t.last=now;shoot(scene,t,target);
+ });
 }
 
-function showTowerRange(scene, x, y, range){
-  const ring = scene.add.circle(x, y, range, 0xffffff, 0.08);
-  ring.setStrokeStyle(2, 0xffffff, 0.4);
-
-  scene.time.delayedCall(600, () => ring.destroy());
-}
-
-// ---------- BULLETS ----------
-
+// BULLETS
 function shoot(scene,t,e){
-  const b={x:t.x,y:t.y,e,dmg:t.dmg,speed:4};
-  b.body=scene.add.circle(b.x,b.y,6,0xffffff);
-  bullets.push(b);
-  scene.tweens.add({
-  targets: b.body,
-  alpha: 0.7,
-  yoyo: true,
-  repeat: -1,
-  duration: 200
-});
+ const b={x:t.x,y:t.y,e,dmg:t.dmg,speed:4};
+ b.body=scene.add.circle(b.x,b.y,6,0xffffff);
+ scene.tweens.add({targets:b.body,alpha:0.7,yoyo:true,repeat:-1,duration:200});
+ bullets.push(b);
 }
 
 function moveBullets(){
-  bullets.forEach((b,i)=>{
-    if(!b.e) return;
-    const dx=b.e.x-b.x, dy=b.e.y-b.y, d=Math.hypot(dx,dy);
-    b.x+=(dx/d)*b.speed; b.y+=(dy/d)*b.speed;
-    b.body.setPosition(b.x,b.y);
-
-    if(d<10){
-      hitEnemy(b.e,b.dmg);
-      b.body.destroy();
-      bullets.splice(i,1);
-    }
-  });
+ bullets.forEach((b,i)=>{
+  if(!b.e)return;
+  const dx=b.e.x-b.x,dy=b.e.y-b.y,d=Math.hypot(dx,dy);
+  b.x+=(dx/d)*b.speed;b.y+=(dy/d)*b.speed;b.body.setPosition(b.x,b.y);
+  if(d<10){hitEnemy(b.e,b.dmg);b.body.destroy();bullets.splice(i,1);}
+ });
 }
 
-// ---------- DAMAGE ----------
-
+// DAMAGE
 function hitEnemy(e,dmg){
-  e.hp-=dmg;
-  e.text.setText(e.hp);
-  e.body.scale*=0.95;
-  const flash = e.body.scene.add.circle(e.x,e.y,20,0xffffff,0.2);
-e.body.scene.time.delayedCall(100,()=>flash.destroy());
-const boom = e.body.scene.add.circle(e.x,e.y,25,0xffaa00,0.3);
-e.body.scene.time.delayedCall(150,()=>boom.destroy());
-
-  if(e.hp<=0){
-    e.body.destroy(); e.text.destroy();
-    enemies=enemies.filter(x=>x!==e);
-    money+=10;
-    moneyText.setText("Money: "+money);
-  }
+ const flash=e.body.scene.add.circle(e.x,e.y,20,0xffffff,0.2);
+ e.body.scene.time.delayedCall(100,()=>flash.destroy());
+ e.hp-=dmg;e.text.setText(e.hp);e.body.scale*=0.95;
+ if(e.hp<=0){
+  const boom=e.body.scene.add.circle(e.x,e.y,25,0xffaa00,0.3);
+  e.body.scene.time.delayedCall(150,()=>boom.destroy());
+  e.body.destroy();e.text.destroy();
+  enemies=enemies.filter(x=>x!==e);
+  money+=10;moneyText.setText("Money: "+money);
+ }
 }
 
 function damageCrystal(i){
-  enemies[i].body.destroy();
-  enemies[i].text.destroy();
-  enemies.splice(i,1);
-  crystalHP--;
-  hpText.setText("Crystal: "+crystalHP);
-  if(crystalHP<=0) gameOver();
+ enemies[i].body.destroy();enemies[i].text.destroy();
+ enemies.splice(i,1);crystalHP--;hpText.setText("Crystal: "+crystalHP);
+ if(crystalHP<=0)gameOver();
 }
 
-// ---------- GAME OVER / PVP ----------
+// UPGRADES & SELL
+function getUpgradeCost(level){return 40+level*30;}
 
+function upgradeTowerPath(type){
+ if(!selectedTower)return;
+ const cost=getUpgradeCost(selectedTower.level);
+ if(money<cost)return;
+ money-=cost;moneyText.setText("Money: "+money);
+ selectedTower.level++;selectedTower.path=type;
+ if(type==="damage")selectedTower.dmg+=2;
+ else if(type==="speed")selectedTower.rate*=0.8;
+ else if(type==="range")selectedTower.range+=20;
+ showSelectedTowerRange(game.scene.scenes[0],selectedTower);
+}
+
+function sellSelectedTower(){
+ if(!selectedTower)return;
+ const refund=Math.floor(SHAPES[selectedTower.type].cost*0.6);
+ money+=refund;moneyText.setText("Money: "+money);
+ selectedTower.body.destroy();
+ towers=towers.filter(t=>t!==selectedTower);
+ if(selectedTowerRing)selectedTowerRing.destroy();
+ selectedTower=null;
+}
+
+// RANGE VISUALS
+function showTowerRange(scene,x,y,range){
+ const ring=scene.add.circle(x,y,range,0xffffff,0.08).setStrokeStyle(2,0xffffff,0.4);
+ scene.time.delayedCall(600,()=>ring.destroy());
+}
+
+function showSelectedTowerRange(scene,tower){
+ if(selectedTowerRing)selectedTowerRing.destroy();
+ selectedTowerRing=scene.add.circle(tower.x,tower.y,tower.range,0xffffff,0.07).setStrokeStyle(2,0xffffff,0.6);
+ scene.time.delayedCall(1500,()=>{if(selectedTowerRing)selectedTowerRing.destroy();selectedTowerRing=null;});
+}
+
+// GAME OVER
 function gameOver(){
-  const best=localStorage.getItem("bestWave")||0;
-  if(wave>best) localStorage.setItem("bestWave",wave);
-  alert(`Game Over\nWave: ${wave}\nBest: ${localStorage.getItem("bestWave")}`);
-  location.reload();
+ const best=localStorage.getItem("bestWave")||0;
+ if(wave>best)localStorage.setItem("bestWave",wave);
+ alert(`Game Over\nWave: ${wave}\nBest: ${localStorage.getItem("bestWave")}`);
+ location.reload();
 }
