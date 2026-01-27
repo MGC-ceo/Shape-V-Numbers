@@ -1,3 +1,4 @@
+let selectedTower = null;
 let selectedTowerRing = null;
 let previewRing;
 let paused = false;
@@ -156,12 +157,30 @@ function placeTower(scene,x,y,type){
   t.body = scene.add.circle(x,y,14,s.color);
   t.body.setInteractive();
 
-  t.body.on("pointerdown", () => {
-    showSelectedTowerRange(scene, t);
-  });
+t.body.on("pointerdown", () => {
+  selectedTower = t;
+  showSelectedTowerRange(scene, t);
+});
 
   towers.push(t);
   showTowerRange(scene, x, y, s.range);
+}
+
+function upgradeSelectedTower(){
+  if(!selectedTower) return;
+
+  const cost = getUpgradeCost(selectedTower.level);
+  if(money < cost) return;
+
+  money -= cost;
+  moneyText.setText("Money: " + money);
+
+  selectedTower.level++;
+  selectedTower.dmg += 1;
+  selectedTower.range += 10;
+  selectedTower.rate *= 0.9; // shoots faster
+
+  showTowerRange(game.scene.scenes[0], selectedTower.x, selectedTower.y, selectedTower.range);
 }
 
 function getUpgradeCost(level){
