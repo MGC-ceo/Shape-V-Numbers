@@ -30,6 +30,13 @@ const ENEMY_TYPES = [
   { hp: 10, speed: 0.6, color: 0xff5555 }  // normal
 ];
 
+const BOSS = {
+  hp: 80,
+  speed: 0.35,
+  color: 0x00ffff,
+  size: 28
+};
+
 const path = [
   { x: 0, y: 300 },
   { x: 200, y: 300 },
@@ -161,9 +168,27 @@ function drawPath(scene){
 // ---------- ENEMIES ----------
 
 function spawnWave(scene){
-  for(let i=0;i<wave+2;i++) spawnEnemy(scene);
+  if(wave % 5 === 0){
+    spawnBoss(scene);
+  } else {
+    for(let i=0;i<wave+2;i++) spawnEnemy(scene);
+  }
 }
 
+function spawnBoss(scene){
+  const e = {
+    hp: BOSS.hp + wave * 2,
+    speed: BOSS.speed,
+    index: 0,
+    x: path[0].x,
+    y: path[0].y
+  };
+
+  e.body = scene.add.circle(e.x, e.y, BOSS.size, BOSS.color);
+  e.text = scene.add.text(e.x-10, e.y-12, e.hp, {color:"#000"});
+
+  enemies.push(e);
+}
 
 function spawnEnemy(scene){
   const type = Phaser.Utils.Array.GetRandom(ENEMY_TYPES);
@@ -200,14 +225,14 @@ function moveEnemies(){
 
 function placeTower(scene,x,y,type){
   const s = SHAPES[type];
-  const t = { 
-  x, y,
-  type,
+const t = { 
+  x, y, type,
   dmg:s.dmg,
   rate:s.rate,
   last:0,
   range:s.range,
-  level:1
+  level:1,
+  path:null
 };
 
   t.body = scene.add.circle(x,y,14,s.color);
