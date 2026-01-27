@@ -44,6 +44,13 @@ const path = [
   { x: 600, y: 300 },
   { x: 800, y: 300 }
 ];
+const path2 = [
+  { x: 0, y: 450 },
+  { x: 250, y: 450 },
+  { x: 400, y: 350 },
+  { x: 600, y: 300 },
+  { x: 750, y: 300 }
+];
 
 let enemies = [];
 let towers = [];
@@ -154,24 +161,28 @@ function update(){
 
 // ---------- PATH DRAWING ----------
 
-function drawPath(scene){
+function drawSinglePath(scene, p, color=0x444444){
   const g = scene.add.graphics();
-  g.lineStyle(20, 0x444444, 1);
+  g.lineStyle(20, color, 1);
   g.beginPath();
-  g.moveTo(path[0].x, path[0].y);
-  for(let i=1;i<path.length;i++) g.lineTo(path[i].x, path[i].y);
+  g.moveTo(p[0].x, p[0].y);
+  for(let i=1;i<p.length;i++) g.lineTo(p[i].x, p[i].y);
   g.strokePath();
-
-  path.forEach(p=> scene.add.circle(p.x, p.y, 6, 0x888888));
+  p.forEach(pt=> scene.add.circle(pt.x, pt.y, 6, 0x888888));
 }
+
+function drawPath(scene){
+  drawSinglePath(scene, path);
+  drawSinglePath(scene, path2, 0x333333);
+}
+
 
 // ---------- ENEMIES ----------
 
 function spawnWave(scene){
-  if(wave % 5 === 0){
-    spawnBoss(scene);
-  } else {
-    for(let i=0;i<wave+2;i++) spawnEnemy(scene);
+  for(let i=0;i<wave+1;i++){
+    spawnEnemy(scene, path);
+    spawnEnemy(scene, path2);
   }
 }
 
@@ -190,15 +201,23 @@ function spawnBoss(scene){
   enemies.push(e);
 }
 
-function spawnEnemy(scene){
+function spawnEnemy(scene, chosenPath){
   const type = Phaser.Utils.Array.GetRandom(ENEMY_TYPES);
+
   const e = { 
     hp: type.hp + wave,
     speed: type.speed,
     index:0,
-    x:path[0].x,
-    y:path[0].y
+    path: chosenPath,
+    x: chosenPath[0].x,
+    y: chosenPath[0].y
   };
+
+  e.body = scene.add.circle(e.x,e.y,16,type.color);
+  e.text = scene.add.text(e.x-6,e.y-8,e.hp,{color:"#fff"});
+
+  enemies.push(e);
+}
 
   e.body = scene.add.circle(e.x,e.y,16,type.color);
   e.text = scene.add.text(e.x-6,e.y-8,e.hp,{color:"#fff"});
@@ -208,7 +227,7 @@ function spawnEnemy(scene){
 
 function moveEnemies(){
   enemies.forEach((e,i)=>{
-    const next = path[e.index+1];
+    const next = e.path[e.index+1];
     if(!next){ damageCrystal(i); return; }
 
     const dx = next.x-e.x, dy = next.y-e.y, d=Math.hypot(dx,dy);
@@ -262,7 +281,7 @@ function sellSelectedTower(){
   selectedTower = null;
 }
 
-function upgradeSelectedTower(){
+function upgradeTowerPath(pathType){
   if(!selectedTower) return;
 
   const cost = getUpgradeCost(selectedTower.level);
@@ -272,12 +291,21 @@ function upgradeSelectedTower(){
   moneyText.setText("Money: " + money);
 
   selectedTower.level++;
-  selectedTower.dmg += 1;
-  selectedTower.range += 10;
-  selectedTower.rate *= 0.9; // shoots faster
+  selectedTower.path = pathType;
+
+  if(pathType === "damage"){
+    selectedTower.dmg += 2;
+  }
+  else if(pathType === "speed"){
+    selectedTower.rate *= 0.8;
+  }
+  else if(pathType === "range"){
+    selectedTower.range += 20;
+  }
 
   showTowerRange(game.scene.scenes[0], selectedTower.x, selectedTower.y, selectedTower.range);
 }
+
 
 function getUpgradeCost(level){
   return 40 + level * 30;
