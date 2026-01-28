@@ -176,3 +176,106 @@ function damageCrystal(scene,amount){
     scene.scene.start("MenuScene");
   }
 }
+
+function drawPath(scene){
+  const g = scene.add.graphics();
+  g.lineStyle(20, 0x444444, 1);
+  g.beginPath();
+  g.moveTo(path[0].x, path[0].y);
+  for(let i=1;i<path.length;i++){
+    g.lineTo(path[i].x, path[i].y);
+  }
+  g.strokePath();
+}
+
+function tryPlaceTower(scene,x,y){
+  if(towers.length >= MAX_TOWERS) return;
+
+  const tData = SHAPES[selectedTower];
+  if(money < tData.cost) return;
+
+  for(let p of path){
+    if(Phaser.Math.Distance.Between(x,y,p.x,p.y) < 50) return;
+  }
+
+  money -= tData.cost;
+  moneyText.setText("Money: "+money);
+
+  addTower(scene,x,y,selectedTower);
+  towerCountText.setText("Towers: "+towers.length+" / "+MAX_TOWERS);
+}
+
+function addTower(scene,x,y,type){
+  const s = SHAPES[type];
+
+  towers.push({
+    x,y,
+    range:s.range,
+    dmg:s.dmg,
+    rate:s.rate,
+    nextTick:0,
+    type
+  });
+
+  if(type==="circle"){
+    scene.add.circle(x,y,14,s.color).setStrokeStyle(2,0xffffff);
+  }
+  if(type==="square"){
+    scene.add.rectangle(x,y,28,28,s.color).setStrokeStyle(2,0xffffff);
+  }
+  if(type==="triangle"){
+    scene.add.polygon(x,y,[0,-16,-14,12,14,12],s.color).setStrokeStyle(2,0xffffff);
+  }
+}
+
+function changeSelection(type){
+  selectedTower = type;
+  selectText.setText("Selected: "+type.toUpperCase());
+}
+
+function updateTowerDamage(time){
+  towers.forEach(t=>{
+    if(time < t.nextTick) return;
+    t.nextTick = time + t.rate;
+    const rangeSq = t.range*t.range;
+
+    enemies.forEach(e=>{
+      if(!e.alive) return;
+      const dx=e.x-t.x, dy=e.y-t.y;
+      if(dx*dx+dy*dy <= rangeSq){
+        damageEnemy(e,t.dmg);
+      }
+    });
+  });
+}
+
+function drawLasers(){
+  laserGraphics.clear();
+
+  towers.forEach(t=>{
+    enemies.forEach(e=>{
+      if(!e.alive) return;
+      const dx=e.x-t.x, dy=e.y-t.y;
+      if(dx*dx+dy*dy <= t.range*t.range){
+        laserGraphics.lineStyle(2,0xffffff,0.4);
+        laserGraphics.beginPath();
+        laserGraphics.moveTo(t.x,t.y);
+        laserGraphics.lineTo(e.x,e.y);
+        laserGraphics.strokePath();
+      }
+    });
+  });
+}
+
+function damageEnemy(e,dmg){
+  e.hp -= dmg;
+  e.text.setText(Math.floor(e.hp));
+
+  if(e.hp <= 0){
+    e.alive=false;
+    e.body.destroy();
+    e.text.destroy();
+    money += 15;
+    moneyText.setText("Money: "+money);
+  }
+}
