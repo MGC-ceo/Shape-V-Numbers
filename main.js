@@ -73,9 +73,15 @@ function update(){
  moveEnemies();
  updateLasers(this);
 
- // Remove dead enemies cleanly after logic
- enemies = enemies.filter(e => e.alive !== false);
-}
+// Safe cleanup AFTER rendering cycle
+enemies = enemies.filter(e => {
+ if(!e.alive){
+   e.body.destroy();
+   e.text.destroy();
+   return false;
+ }
+ return true;
+});
 
 // ---------------- PATH ----------------
 
@@ -220,22 +226,33 @@ function updateLasers(scene){
 function hitEnemy(e,dmg){
  if(!e.alive) return;
 
- e.hp-=dmg;
+ e.hp -= dmg;
  e.text.setText(e.hp);
 
- if(e.hp<=0){
-  e.alive=false;
-  e.body.destroy();
-  e.text.destroy();
-  money+=10; moneyText.setText("Money: "+money);
+ if(e.hp <= 0){
+  e.alive = false;
+
+  // Hide instead of destroy (prevents render bugs)
+  e.body.setVisible(false);
+  e.text.setVisible(false);
+
+  money += 10;
+  moneyText.setText("Money: " + money);
  }
 }
 
 function damageCrystal(i){
- enemies[i].body.destroy(); enemies[i].text.destroy();
- enemies[i].alive=false;
- crystalHP--; hpText.setText("Crystal: "+crystalHP);
- if(crystalHP<=0) gameOver();
+ const e = enemies[i];
+ if(!e || !e.alive) return;
+
+ e.alive = false;
+ e.body.setVisible(false);
+ e.text.setVisible(false);
+
+ crystalHP--;
+ hpText.setText("Crystal: " + crystalHP);
+
+ if(crystalHP <= 0) gameOver();
 }
 
 function gameOver(){
