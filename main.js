@@ -1,9 +1,18 @@
+// ===== UI BUTTON FUNCTIONS (MUST BE GLOBAL) =====
+let paused = false;
+function togglePause(){ paused = !paused; }
+function restartGame(){ location.reload(); }
+
 const config = {
   type: Phaser.AUTO,
-  width: window.innerWidth,
-  height: window.innerHeight,
+  width: 1280,
+  height: 720,
   backgroundColor: "#111",
-  scene: { preload, create, update }
+  scene: { preload, create, update },
+  scale: {
+    mode: Phaser.Scale.FIT,
+    autoCenter: Phaser.Scale.CENTER_BOTH
+  }
 };
 
 const game = new Phaser.Game(config);
