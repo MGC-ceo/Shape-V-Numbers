@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Shape Defense</title>
 
   <!-- Phaser Engine -->
   <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js"></script>
 
-  <!-- Game Code -->
+  <!-- Your Game Code -->
   <script src="main.js" defer></script>
 
   <style>
@@ -18,34 +18,13 @@
       font-family: monospace;
     }
 
-    #ui {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      z-index: 10;
-    }
-
-    button {
-      padding: 6px 12px;
-      margin-left: 6px;
-      font-size: 14px;
-      cursor: pointer;
-      border: none;
-      border-radius: 4px;
-      background: #222;
-      color: white;
-    }
-
-    button:hover {
-      background: #444;
+    canvas {
+      display: block;
+      margin: 0 auto;
     }
   </style>
 </head>
 
 <body>
-  <div id="ui">
-    <button onclick="togglePause()">Pause</button>
-    <button onclick="restartGame()">Restart</button>
-  </div>
 </body>
 </html>
