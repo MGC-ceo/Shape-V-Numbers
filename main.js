@@ -8,35 +8,48 @@ const config = {
 
 new Phaser.Game(config);
 
+/* ================= SETTINGS ================= */
+
 const SHAPES = {
-  circle:   { range:130, dmg:2, rate:600,  color:0x00ffcc },
-  square:   { range:170, dmg:5, rate:1400, color:0xffaa00 },
-  triangle: { range:90,  dmg:3, rate:300,  color:0xaa66ff }
+  circle:   { range:130, dmg:2, rate:600,  cost:40,  color:0x00ffcc },
+  square:   { range:170, dmg:5, rate:1400, cost:70,  color:0xffaa00 },
+  triangle: { range:90,  dmg:3, rate:300,  cost:50,  color:0xaa66ff }
 };
 
 const path = [
   {x:0,y:300},{x:200,y:300},{x:400,y:200},{x:600,y:300},{x:800,y:300}
 ];
 
+/* ================= GAME STATE ================= */
+
 let enemies = [];
 let towers = [];
 let wave = 1;
-let laserGraphics;
+let money = 150;
+let selectedTower = "circle";
+let laserGraphics, moneyText, waveText, selectText;
+
+/* ================= SCENE ================= */
 
 function create(){
   drawPath(this);
 
   laserGraphics = this.add.graphics();
 
-  // Starter towers for testing
-  addTower(this, 250, 250, "circle");
-  addTower(this, 420, 180, "square");
-  addTower(this, 500, 320, "triangle");
+  moneyText = this.add.text(10,10,"Money: "+money,{color:"#fff"});
+  waveText = this.add.text(10,30,"Wave: 1",{color:"#fff"});
+  selectText = this.add.text(10,50,"Selected: CIRCLE",{color:"#fff"});
+
+  this.input.on("pointerdown", p => tryPlaceTower(this, p.x, p.y));
+
+  this.input.keyboard.on("keydown-ONE", ()=>changeSelection("circle"));
+  this.input.keyboard.on("keydown-TWO", ()=>changeSelection("square"));
+  this.input.keyboard.on("keydown-THREE", ()=>changeSelection("triangle"));
 
   spawnWave(this);
 
   this.time.addEvent({
-    delay:5000,
+    delay:6000,
     loop:true,
     callback:()=>spawnWave(this)
   });
@@ -52,12 +65,12 @@ function update(time){
 
 function spawnWave(scene){
   for(let i=0;i<5+wave;i++){
-    const hp = 10 + wave*2;
+    const hp = 12 + wave*3;
     const e = {
       x:path[0].x,
       y:path[0].y,
       hp,
-      speed:0.7 + wave*0.05,
+      speed:0.8 + wave*0.05,
       pathIndex:0,
       alive:true
     };
@@ -66,6 +79,7 @@ function spawnWave(scene){
     enemies.push(e);
   }
   wave++;
+  waveText.setText("Wave: "+wave);
 }
 
 function moveEnemies(){
@@ -94,6 +108,19 @@ function moveEnemies(){
 
 /* ================= TOWERS ================= */
 
+function tryPlaceTower(scene,x,y){
+  const tData = SHAPES[selectedTower];
+  if(money < tData.cost) return;
+
+  for(let p of path){
+    if(Phaser.Math.Distance.Between(x,y,p.x,p.y) < 50) return;
+  }
+
+  money -= tData.cost;
+  moneyText.setText("Money: "+money);
+  addTower(scene,x,y,selectedTower);
+}
+
 function addTower(scene,x,y,type){
   const s=SHAPES[type];
   towers.push({
@@ -105,6 +132,11 @@ function addTower(scene,x,y,type){
     type:type
   });
   scene.add.circle(x,y,14,s.color);
+}
+
+function changeSelection(type){
+  selectedTower = type;
+  selectText.setText("Selected: "+type.toUpperCase());
 }
 
 function updateTowerDamage(time){
@@ -124,7 +156,7 @@ function updateTowerDamage(time){
   });
 }
 
-/* ================= LASERS (VISUAL ONLY) ================= */
+/* ================= LASERS (VISUAL) ================= */
 
 function drawLasers(){
   laserGraphics.clear();
@@ -164,6 +196,8 @@ function damageEnemy(e,dmg){
     e.alive=false;
     e.body.destroy();
     e.text.destroy();
+    money += 15;
+    moneyText.setText("Money: "+money);
   }
 }
 
