@@ -77,7 +77,7 @@ function update(){
   moveEnemies();
   updateLasers(this);
 
-  // SAFE CLEANUP
+  // Safe cleanup
   enemies = enemies.filter(e=>{
     if(!e.alive){
       e.body.destroy();
@@ -108,9 +108,9 @@ function spawnWave(scene){
 
 function spawnEnemy(scene){
   const type=Phaser.Utils.Array.GetRandom(ENEMY_TYPES);
-  const e={hp:type.hp+wave,speed:type.speed,index:0,x:path[0].x,y:path[0].y,alive:true};
-  e.body=scene.add.circle(e.x,e.y,16,type.color);
-  e.text=scene.add.text(e.x-6,e.y-8,e.hp,{color:"#fff"});
+  const e={hp:type.hp+wave,speed:type.speed,index:0,alive:true};
+  e.body=scene.add.circle(path[0].x,path[0].y,16,type.color);
+  e.text=scene.add.text(e.body.x-6,e.body.y-8,e.hp,{color:"#fff"});
   enemies.push(e);
 }
 
@@ -121,11 +121,13 @@ function moveEnemies(){
     const next=path[e.index+1];
     if(!next){ damageCrystal(i); return; }
 
-    const dx=next.x-e.x,dy=next.y-e.y,d=Math.hypot(dx,dy);
-    e.x+=(dx/d)*e.speed;
-    e.y+=(dy/d)*e.speed;
-    e.body.setPosition(e.x,e.y);
-    e.text.setPosition(e.x-6,e.y-8);
+    const dx=next.x-e.body.x;
+    const dy=next.y-e.body.y;
+    const d=Math.hypot(dx,dy);
+
+    e.body.x += (dx/d)*e.speed;
+    e.body.y += (dy/d)*e.speed;
+    e.text.setPosition(e.body.x-6,e.body.y-8);
 
     if(d<4) e.index++;
   });
@@ -162,56 +164,51 @@ function placeTowerIfValid(scene,x,y){
 // ---------------- LASERS ----------------
 
 function updateLasers(scene){
-  const delta = scene.game.loop.delta; // time since last frame (ms)
+  const now=scene.time.now;
 
   towers.forEach(t=>{
 
-    // Lose dead target
-    if(t.target && !t.target.alive) t.target = null;
+    if(t.target && !t.target.alive) t.target=null;
 
-    // Lose out-of-range target
     if(t.target){
-      const dist = Phaser.Math.Distance.Between(t.x,t.y,t.target.x,t.target.y);
-      if(dist > t.range) t.target = null;
+      const dist=Phaser.Math.Distance.Between(t.x,t.y,t.target.body.x,t.target.body.y);
+      if(dist>t.range) t.target=null;
     }
 
-    // Find new target
     if(!t.target){
-      t.target = enemies.find(e =>
-        e.alive && Phaser.Math.Distance.Between(t.x,t.y,e.x,e.y) <= t.range
-      );
+      t.target=enemies.find(e=>e.alive && Phaser.Math.Distance.Between(t.x,t.y,e.body.x,e.body.y)<=t.range);
+      if(t.target) t.lastTick=0;
     }
 
-    // No target = no beam
     if(!t.target){
-      if(t.beam){ t.beam.destroy(); t.beam = null; }
+      if(t.beam){ t.beam.destroy(); t.beam=null; }
       return;
     }
 
-    // Beam style
-    let color = 0x00ffcc, width = 3;
-    if(t.dmg >= 5){ color = 0xffaa00; width = 5; }
-    else if(t.dmg <= 1){ color = 0xaa66ff; width = 2; }
+    let color=0x00ffcc, width=3;
+    if(t.dmg>=5){ color=0xffaa00;width=5; }
+    else if(t.dmg<=1){ color=0xaa66ff;width=2; }
 
     if(t.beam) t.beam.destroy();
 
-    // Use RENDERED position (prevents visual lag)
-    const ex = t.target.body.x;
-    const ey = t.target.body.y;
+    const ex=t.target.body.x;
+    const ey=t.target.body.y;
+    const angle=Phaser.Math.Angle.Between(t.x,t.y,ex,ey);
+    const startX=t.x+Math.cos(angle)*14;
+    const startY=t.y+Math.sin(angle)*14;
 
-    const angle = Phaser.Math.Angle.Between(t.x, t.y, ex, ey);
-    const startX = t.x + Math.cos(angle) * 14;
-    const startY = t.y + Math.sin(angle) * 14;
-
-    t.beam = scene.add.line(0,0,startX,startY,ex,ey,color)
+    t.beam=scene.add.line(0,0,startX,startY,ex,ey,color)
       .setLineWidth(width)
       .setAlpha(0.95);
 
-    // 💥 CONTINUOUS DAMAGE BASED ON TIME
-    const damagePerMs = t.dmg / t.rate;  
-    const damageThisFrame = damagePerMs * delta;
+    if(now-t.lastTick>=t.rate){
+      t.lastTick=now;
+      hitEnemy(t.target,t.dmg);
 
-    hitEnemy(t.target, damageThisFrame);
+      if(t.target.alive){
+        scene.tweens.add({targets:t.target.body,alpha:0.6,duration:50,yoyo:true});
+      }
+    }
   });
 }
 
@@ -220,15 +217,13 @@ function updateLasers(scene){
 function hitEnemy(e,dmg){
   if(!e.alive) return;
 
-  e.hp -= dmg;
-  e.text.setText(Math.ceil(e.hp));
+  e.hp-=dmg;
+  e.text.setText(e.hp);
 
-  if(e.hp <= 0){
-    e.alive = false;
-    e.body.setVisible(false);
-    e.text.setVisible(false);
-    money += 10;
-    moneyText.setText("Money: " + money);
+  if(e.hp<=0){
+    e.alive=false;
+    money+=10;
+    moneyText.setText("Money: "+money);
   }
 }
 
@@ -237,9 +232,6 @@ function damageCrystal(i){
   if(!e||!e.alive) return;
 
   e.alive=false;
-  e.body.setVisible(false);
-  e.text.setVisible(false);
-
   crystalHP--;
   hpText.setText("Crystal: "+crystalHP);
 
