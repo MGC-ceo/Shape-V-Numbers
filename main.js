@@ -187,11 +187,15 @@ function updateLasers(scene){
 
   if(t.beam) t.beam.destroy();
 
-  const angle = Phaser.Math.Angle.Between(t.x, t.y, t.target.x, t.target.y);
-  const startX = t.x + Math.cos(angle) * 14;
-  const startY = t.y + Math.sin(angle) * 14;
+ // Use rendered body position to prevent visual lag
+const ex = t.target.body.x;
+const ey = t.target.body.y;
 
-  t.beam = scene.add.line(0,0,startX,startY,t.target.x,t.target.y,color)
+const angle = Phaser.Math.Angle.Between(t.x, t.y, ex, ey);
+const startX = t.x + Math.cos(angle) * 14;
+const startY = t.y + Math.sin(angle) * 14;
+
+t.beam = scene.add.line(0,0,startX,startY,ex,ey,color)
     .setLineWidth(width)
     .setAlpha(0.95);
 
