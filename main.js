@@ -3,6 +3,11 @@ const config = {
   width: 800,
   height: 600,
   backgroundColor: "#111",
+  parent: "game-container",
+  scale: {
+    mode: Phaser.Scale.FIT,        // keeps aspect ratio
+    autoCenter: Phaser.Scale.CENTER_BOTH
+  },
   scene: [MenuScene, SoloScene, PartyScene]
 };
 
