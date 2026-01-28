@@ -1,235 +1,144 @@
+let towers = [];
+let enemies = [];
+let money = 100;
+let wave = 1;
+let level = 1;
+let selectedShape = "circle";
+let lastWaveBeaten = 1;
+const MAX_TOWERS = 25;
+
+const SHAPES = {
+  circle:   { dmg:2, rate:700, range:130, color:0x00ffff, cost:30 },
+  square:   { dmg:4, rate:1400, range:200, color:0xffaa00, cost:50 },
+  triangle: { dmg:3, rate:350, range:90, color:0xaa66ff, cost:40 }
+};
+
 const config = {
   type: Phaser.AUTO,
   width: 800,
   height: 600,
   backgroundColor: "#111",
+  scale: {
+    mode: Phaser.Scale.FIT,
+    autoCenter: Phaser.Scale.CENTER_BOTH
+  },
   scene: [MenuScene, SoloScene, PartyScene]
 };
 
 new Phaser.Game(config);
 
-/* ================= GLOBAL PLAYER DATA ================= */
-
-let playerLevel = 1;
-
-/* ================= MENU SCENE ================= */
+//////////////////// MENU ////////////////////
 
 function MenuScene(){ Phaser.Scene.call(this,{key:"MenuScene"}); }
 MenuScene.prototype = Object.create(Phaser.Scene.prototype);
 
 MenuScene.prototype.create = function(){
+  this.add.text(400,80,"SHAPE DEFENSE",{font:"48px Arial",color:"#fff"}).setOrigin(0.5);
+  this.add.text(400,140,"LEVEL: "+level,{font:"28px Arial",color:"#00ffaa"}).setOrigin(0.5);
 
-  this.add.text(400,80,"SHAPE DEFENSE",{fontSize:"42px",color:"#ffffff"}).setOrigin(0.5);
+  let play = this.add.text(400,260,"PLAY",{font:"40px Arial",color:"#fff"}).setOrigin(0.5).setInteractive();
+  play.on("pointerdown",()=>this.scene.start("SoloScene"));
 
-  this.levelText = this.add.text(400,130,"LEVEL: "+playerLevel,{fontSize:"20px",color:"#00ffcc"}).setOrigin(0.5);
+  this.add.text(400,310,"More Content Soon",{font:"20px Arial",color:"#888"}).setOrigin(0.5);
 
-  const playBtn = this.add.text(400,250,"PLAY",{fontSize:"36px",color:"#ffffff"}).setOrigin(0.5).setInteractive();
-  playBtn.on("pointerdown", ()=>this.scene.start("SoloScene"));
-
-  const soonText = this.add.text(400,300,"More Content Soon",{fontSize:"16px",color:"#888"}).setOrigin(0.5);
-
-  const partyBtn = this.add.text(400,380,"PARTY",{fontSize:"28px",color:"#ffffff"}).setOrigin(0.5).setInteractive();
-  partyBtn.on("pointerdown", ()=>this.scene.start("PartyScene"));
+  let party = this.add.text(400,380,"PARTY",{font:"36px Arial",color:"#fff"}).setOrigin(0.5).setInteractive();
+  party.on("pointerdown",()=>this.scene.start("PartyScene"));
 };
 
-/* ================= PARTY SCENE ================= */
+//////////////////// PARTY ////////////////////
 
 function PartyScene(){ Phaser.Scene.call(this,{key:"PartyScene"}); }
 PartyScene.prototype = Object.create(Phaser.Scene.prototype);
 
 PartyScene.prototype.create = function(){
+  this.add.text(400,80,"SHAPES",{font:"40px Arial",color:"#fff"}).setOrigin(0.5);
 
-  this.add.text(400,80,"SHAPE STATS",{fontSize:"36px",color:"#ffffff"}).setOrigin(0.5);
-
-  const stats = [
-    "CIRCLE\nDamage: Medium\nRange: Medium\nAttack Speed: Normal",
-    "SQUARE\nDamage: High\nRange: Large\nAttack Speed: Slow",
-    "TRIANGLE\nDamage: Medium\nRange: Short\nAttack Speed: Fast"
-  ];
-
-  stats.forEach((s,i)=>{
-    this.add.text(400,180+i*120,s,{fontSize:"18px",color:"#00ffcc",align:"center"}).setOrigin(0.5);
+  let y=180;
+  Object.keys(SHAPES).forEach(shape=>{
+    let s=SHAPES[shape];
+    this.add.text(400,y,shape.toUpperCase(),{font:"26px Arial",color:"#fff"}).setOrigin(0.5);
+    this.add.text(400,y+30,`Damage: ${s.dmg} | Range: ${s.range} | Speed: ${s.rate}ms`,{font:"18px Arial",color:"#aaa"}).setOrigin(0.5);
+    y+=90;
   });
 
-  const backBtn = this.add.text(400,540,"BACK",{fontSize:"24px",color:"#ffffff"}).setOrigin(0.5).setInteractive();
-  backBtn.on("pointerdown", ()=>this.scene.start("MenuScene"));
+  this.add.text(400,520,"BACK",{font:"28px Arial",color:"#fff"}).setOrigin(0.5).setInteractive()
+    .on("pointerdown",()=>this.scene.start("MenuScene"));
 };
 
-/* ================= SOLO GAME SCENE ================= */
+//////////////////// SOLO GAME ////////////////////
 
 function SoloScene(){ Phaser.Scene.call(this,{key:"SoloScene"}); }
 SoloScene.prototype = Object.create(Phaser.Scene.prototype);
 
-/* ===== SETTINGS ===== */
-
-const MAX_TOWERS = 25;
-
-const SHAPES = {
-  circle:   { range:130, dmg:2, rate:600,  cost:40,  color:0x00ffcc },
-  square:   { range:170, dmg:5, rate:1400, cost:70,  color:0xffaa00 },
-  triangle: { range:90,  dmg:3, rate:300,  cost:50,  color:0xaa66ff }
-};
-
-const path = [
-  {x:0,y:300},{x:200,y:300},{x:400,y:200},{x:600,y:300},{x:800,y:300}
-];
-
-let enemies, towers, wave, money, crystalHP, selectedTower;
-let laserGraphics, moneyText, waveText, selectText, hpText, towerCountText;
-
 SoloScene.prototype.create = function(){
+  towers=[]; enemies=[]; money=100; wave=1;
 
-  enemies = [];
-  towers = [];
-  wave = 1;
-  money = 150;
-  crystalHP = 20;
-  selectedTower = "circle";
+  this.add.text(10,10,"Money: "+money,{color:"#fff"});
+  this.moneyText=this.add.text(10,40,"Wave: "+wave,{color:"#fff"});
 
-  drawPath(this);
-  laserGraphics = this.add.graphics();
+  this.input.on("pointerdown",p=>placeTower(this,p.x,p.y));
 
-  moneyText = this.add.text(10,10,"Money: "+money,{color:"#fff"});
-  waveText = this.add.text(10,30,"Wave: 1",{color:"#fff"});
-  selectText = this.add.text(10,50,"Selected: CIRCLE",{color:"#fff"});
-  hpText = this.add.text(10,70,"Crystal HP: "+crystalHP,{color:"#00ffff"});
-  towerCountText = this.add.text(10,90,"Towers: 0 / "+MAX_TOWERS,{color:"#aaa"});
-
-  this.input.on("pointerdown", p => tryPlaceTower(this, p.x, p.y));
-  this.input.keyboard.on("keydown-ONE", ()=>changeSelection("circle"));
-  this.input.keyboard.on("keydown-TWO", ()=>changeSelection("square"));
-  this.input.keyboard.on("keydown-THREE", ()=>changeSelection("triangle"));
-  this.input.keyboard.on("keydown-ESC", ()=>this.scene.start("MenuScene"));
-
-  spawnWave(this);
-
-  this.time.addEvent({ delay:7000, loop:true, callback:()=>spawnWave(this) });
+  this.time.addEvent({delay:2500,loop:true,callback:()=>spawnEnemy(this)});
 };
 
 SoloScene.prototype.update = function(time){
-  moveEnemies(this);
-  updateTowerDamage(time);
-  drawLasers();
-};
-
-/* ================= GAME LOGIC (UNCHANGED CORE) ================= */
-
-function spawnWave(scene){
-  const isBossWave = wave % 5 === 0;
-
-  for(let i=0;i<5+wave;i++){
-    const hp = isBossWave ? 150 + wave*10 : 12 + wave*3;
-    const size = isBossWave ? 22 : 14;
-    const speed = isBossWave ? 0.5 : 0.8 + wave*0.05;
-    const color = isBossWave ? 0xff0000 : 0xff5555;
-
-    const e = { x:path[0].x, y:path[0].y, hp, speed, pathIndex:0, alive:true, boss:isBossWave };
-    e.body = scene.add.circle(e.x,e.y,size,color);
-    e.text = scene.add.text(e.x-10,e.y-12,e.hp,{color:"#fff"});
-    enemies.push(e);
-  }
-
-  wave++;
-  waveText.setText("Wave: "+wave);
-}
-
-function moveEnemies(scene){
   enemies.forEach(e=>{
-    if(!e.alive) return;
-
-    const next = path[e.pathIndex+1];
-    if(!next){
-      damageCrystal(scene,e.boss?5:1);
-      e.alive=false;
-      e.body.destroy();
-      e.text.destroy();
-      return;
-    }
-
-    const dx=next.x-e.x, dy=next.y-e.y;
-    const d=Math.hypot(dx,dy);
-    e.x += (dx/d)*e.speed;
-    e.y += (dy/d)*e.speed;
+    e.x+=e.speed;
     e.body.setPosition(e.x,e.y);
-    e.text.setPosition(e.x-10,e.y-12);
-    if(d<4) e.pathIndex++;
-  });
-}
 
-function tryPlaceTower(scene,x,y){
-  if(towers.length >= MAX_TOWERS) return;
-  const tData = SHAPES[selectedTower];
-  if(money < tData.cost) return;
-  for(let p of path){ if(Phaser.Math.Distance.Between(x,y,p.x,p.y) < 50) return; }
-  money -= tData.cost; moneyText.setText("Money: "+money);
-  addTower(scene,x,y,selectedTower);
-  towerCountText.setText("Towers: "+towers.length+" / "+MAX_TOWERS);
-}
-
-function addTower(scene,x,y,type){
-  const s=SHAPES[type];
-  towers.push({x,y,range:s.range,dmg:s.dmg,rate:s.rate,nextTick:0,type});
-  scene.add.circle(x,y,14,s.color);
-}
-
-function changeSelection(type){ selectedTower=type; selectText.setText("Selected: "+type.toUpperCase()); }
-
-function updateTowerDamage(time){
-  towers.forEach(t=>{
-    if(time < t.nextTick) return;
-    t.nextTick = time + t.rate;
-    const rangeSq = t.range*t.range;
-    enemies.forEach(e=>{
-      if(!e.alive) return;
-      const dx=e.x-t.x, dy=e.y-t.y;
-      if(dx*dx+dy*dy<=rangeSq) damageEnemy(e,t.dmg);
-    });
-  });
-}
-
-function drawLasers(){
-  laserGraphics.clear();
-  towers.forEach(t=>{
-    enemies.forEach(e=>{
-      if(!e.alive) return;
-      const dx=e.x-t.x, dy=e.y-t.y;
-      if(dx*dx+dy*dy<=t.range*t.range){
-        laserGraphics.lineStyle(2,0xffffff,0.4);
-        laserGraphics.beginPath();
-        laserGraphics.moveTo(t.x,t.y);
-        laserGraphics.lineTo(e.x,e.y);
-        laserGraphics.strokePath();
+    towers.forEach(t=>{
+      if(Phaser.Math.Distance.Between(t.x,t.y,e.x,e.y)<=t.range){
+        if(time>t.nextTick){
+          t.nextTick=time+t.rate;
+          e.hp-=t.dmg;
+          e.text.setText(e.hp);
+        }
       }
     });
   });
+
+  enemies = enemies.filter(e=>{
+    if(e.hp<=0){
+      e.body.destroy();
+      e.text.destroy();
+      money+=5;
+      this.moneyText.setText("Money: "+money);
+      return false;
+    }
+    return true;
+  });
+};
+
+//////////////////// HELPERS ////////////////////
+
+function spawnEnemy(scene){
+  let hp=10+wave;
+  let e={
+    x:0,y:300,hp:hp,speed:0.5+wave*0.02
+  };
+  e.body=scene.add.circle(e.x,e.y,15,0xff5555);
+  e.text=scene.add.text(e.x-10,e.y-10,hp,{color:"#fff"});
+  enemies.push(e);
 }
 
-function damageEnemy(e,dmg){
-  e.hp-=dmg;
-  e.text.setText(Math.floor(e.hp));
-  if(e.hp<=0){
-    e.alive=false;
-    e.body.destroy();
-    e.text.destroy();
-    money+=15;
-    moneyText.setText("Money: "+money);
+function placeTower(scene,x,y){
+  if(towers.length>=MAX_TOWERS) return;
+  let s=SHAPES[selectedShape];
+  if(money<s.cost) return;
+
+  money-=s.cost;
+  scene.moneyText.setText("Money: "+money);
+
+  let tower={x,y,range:s.range,dmg:s.dmg,rate:s.rate,nextTick:0,type:selectedShape};
+  towers.push(tower);
+
+  if(selectedShape==="circle"){
+    scene.add.circle(x,y,14,s.color);
   }
-}
-
-function damageCrystal(scene,amount){
-  crystalHP-=amount;
-  hpText.setText("Crystal HP: "+crystalHP);
-  if(crystalHP<=0){
-    if(wave-1 > playerLevel) playerLevel = wave-1;
-    scene.scene.start("MenuScene");
+  else if(selectedShape==="square"){
+    scene.add.rectangle(x,y,26,26,s.color);
   }
-}
-
-function drawPath(scene){
-  const g=scene.add.graphics();
-  g.lineStyle(20,0x444444,1);
-  g.beginPath();
-  g.moveTo(path[0].x,path[0].y);
-  for(let i=1;i<path.length;i++) g.lineTo(path[i].x,path[i].y);
-  g.strokePath();
+  else if(selectedShape==="triangle"){
+    scene.add.polygon(x,y,[0,-16, 16,16, -16,16],s.color);
+  }
 }
