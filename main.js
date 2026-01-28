@@ -168,22 +168,36 @@ function tryPlaceTower(scene,x,y){
 
 function addTower(scene,x,y,type){
   const s = SHAPES[type];
-  towers.push({x,y,range:s.range,dmg:s.dmg,rate:s.rate,nextTick:0,type});
 
+  towers.push({
+    x,
+    y,
+    range: s.range,
+    dmg: s.dmg,
+    rate: s.rate,
+    nextTick: 0,
+    type
+  });
+
+  // CIRCLE
   if(type === "circle"){
-    scene.add.circle(x,y,14,s.color).setStrokeStyle(2,0xffffff);
+    scene.add.circle(x, y, 14, s.color)
+      .setStrokeStyle(2, 0xffffff);
   }
 
+  // SQUARE
   if(type === "square"){
-    scene.add.rectangle(x,y,28,28,s.color).setStrokeStyle(2,0xffffff);
+    scene.add.rectangle(x, y, 28, 28, s.color)
+      .setStrokeStyle(2, 0xffffff);
   }
 
+  // TRIANGLE (correctly centered)
   if(type === "triangle"){
-    scene.add.polygon(x,y,[
-      0,-16,
-      -14,12,
-      14,12
-    ], s.color).setStrokeStyle(2,0xffffff);
+    scene.add.polygon(x, y, [
+      0, -16,    // top
+      -14, 12,   // bottom left
+      14, 12     // bottom right
+    ], s.color).setStrokeStyle(2, 0xffffff);
   }
 }
 
