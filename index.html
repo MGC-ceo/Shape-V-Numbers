@@ -3,20 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <title>Shape Defense</title>
-  <style>
-    body { margin:0; background:#000; overflow:hidden; }
-    #ui { position:absolute; top:10px; right:10px; z-index:10; }
-    button { margin:2px; padding:6px 10px; }
-  </style>
-  <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.min.js"></script>
+
+  <!-- Phaser Engine -->
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js"></script>
+
+  <!-- Your Game Code -->
+  <script src="main.js" defer></script>
 </head>
-<body>
 
-<div id="ui">
-  <button onclick="togglePause()">Pause</button>
-  <button onclick="restartGame()">Restart</button>
-</div>
-
-<script src="main.js"></script>
+<body style="margin:0; background:#111; overflow:hidden;">
 </body>
 </html>
