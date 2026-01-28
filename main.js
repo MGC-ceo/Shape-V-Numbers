@@ -10,6 +10,7 @@ const config={
   physics:{default:"arcade"},
   scene:{preload,create,update}
 };
+
 new Phaser.Game(config);
 
 const SHAPES={
@@ -19,9 +20,9 @@ const SHAPES={
 };
 
 const ENEMY_TYPES=[
- {hp:8,speed:0.9,color:0xffcc00},
- {hp:15,speed:0.5,color:0xaa00ff},
- {hp:10,speed:0.6,color:0xff5555}
+ {hp:8,speed:60,color:0xffcc00},
+ {hp:15,speed:40,color:0xaa00ff},
+ {hp:10,speed:50,color:0xff5555}
 ];
 
 const path=[{x:0,y:300},{x:200,y:300},{x:400,y:200},{x:600,y:300},{x:800,y:300}];
@@ -34,7 +35,6 @@ function preload(){}
 
 function create(){
  drawPath(this);
- this.crystal=this.add.circle(750,300,25,0x00aaff);
 
  hpText=this.add.text(650,340,"Crystal: 20",{color:"#fff"});
  waveText=this.add.text(10,10,"Wave: 1",{color:"#fff"});
@@ -56,9 +56,17 @@ function create(){
  this.time.addEvent({delay:8000,loop:true,callback:()=>{
    wave++; waveText.setText("Wave: "+wave); spawnWave(this);
  }});
+
+ // 🔥 Physics overlap for bullets and enemies
+ this.physics.add.overlap(bullets,enemies,(b,e)=>{});
 }
 
-function update(){if(paused)return;moveEnemies();towerShooting(this);moveBullets();}
+function update(){
+ if(paused) return;
+ moveEnemies();
+ towerShooting(this);
+ moveBullets();
+}
 
 // PATH
 function drawPath(scene){
@@ -74,20 +82,23 @@ function drawPath(scene){
 function spawnWave(scene){for(let i=0;i<wave+2;i++)spawnEnemy(scene);}
 function spawnEnemy(scene){
  const type=Phaser.Utils.Array.GetRandom(ENEMY_TYPES);
- const e={hp:type.hp+wave,speed:type.speed,index:0,x:path[0].x,y:path[0].y};
- e.body=scene.add.circle(e.x,e.y,16,type.color);
+ const e=scene.physics.add.circle(path[0].x,path[0].y,16,type.color);
+ e.hp=type.hp+wave;
+ e.speed=type.speed;
+ e.pathIndex=0;
  e.text=scene.add.text(e.x-6,e.y-8,e.hp,{color:"#fff"});
  enemies.push(e);
 }
 
 function moveEnemies(){
  enemies.forEach((e,i)=>{
-  const next=path[e.index+1];
+  const next=path[e.pathIndex+1];
   if(!next){damageCrystal(i);return;}
-  const dx=next.x-e.x,dy=next.y-e.y,d=Math.hypot(dx,dy);
-  e.x+=(dx/d)*e.speed; e.y+=(dy/d)*e.speed;
-  e.body.setPosition(e.x,e.y); e.text.setPosition(e.x-6,e.y-8);
-  if(d<4)e.index++;
+  const dx=next.x-e.x,dy=next.y-e.y;
+  const angle=Math.atan2(dy,dx);
+  e.setVelocity(Math.cos(angle)*e.speed,Math.sin(angle)*e.speed);
+  e.text.setPosition(e.x-6,e.y-8);
+  if(Phaser.Math.Distance.Between(e.x,e.y,next.x,next.y)<6) e.pathIndex++;
  });
 }
 
@@ -119,57 +130,48 @@ function towerShooting(scene){
   if(now-t.last<t.rate)return;
   const target=enemies.find(e=>Phaser.Math.Distance.Between(t.x,t.y,e.x,e.y)<=t.range);
   if(!target)return;
-  t.last=now; shoot(scene,t,target);
+  t.last=now;
+  shoot(scene,t,target);
  });
 }
 
-// BULLETS
-function shoot(scene,t,e){
-  const b = scene.physics.add.circle(t.x, t.y, 6, 0xffffff);
-  b.target = e;
-  b.dmg = t.dmg;
-  bullets.push(b);
+// BULLETS (PHYSICS)
+function shoot(scene,t,target){
+ const b=scene.physics.add.circle(t.x,t.y,6,0xffffff);
+ b.dmg=t.dmg;
+ b.target=target;
+ bullets.push(b);
 }
 
 function moveBullets(){
-  bullets.forEach((b,i)=>{
-    if(!b.target || !enemies.includes(b.target)){
-      b.destroy();
-      bullets.splice(i,1);
-      return;
-    }
+ bullets.forEach((b,i)=>{
+  if(!b.target||!enemies.includes(b.target)){b.destroy();bullets.splice(i,1);return;}
+  const dx=b.target.x-b.x,dy=b.target.y-b.y;
+  const angle=Math.atan2(dy,dx);
+  b.setVelocity(Math.cos(angle)*200,Math.sin(angle)*200);
 
-    const dx = b.target.x - b.x;
-    const dy = b.target.y - b.y;
-    const angle = Math.atan2(dy,dx);
-
-    b.setVelocity(Math.cos(angle)*200, Math.sin(angle)*200);
-  });
-}
-
-this.physics.add.overlap(
-  bullets,
-  enemies.map(e=>e.body),
-  (bulletBody, enemyBody)=>{
-    const bullet = bullets.find(b=>b.body===bulletBody);
-    const enemy = enemies.find(e=>e.body===enemyBody);
-
-    if(!bullet || !enemy) return;
-
-    hitEnemy(enemy, bullet.dmg);
-    bullet.destroy();
-    bullets.splice(bullets.indexOf(bullet),1);
+  if(Phaser.Math.Distance.Between(b.x,b.y,b.target.x,b.target.y)<22){
+    hitEnemy(b.target,b.dmg);
+    b.destroy();
+    bullets.splice(i,1);
   }
-);
+ });
+}
 
 // DAMAGE
 function hitEnemy(e,dmg){
- e.hp-=dmg; e.text.setText(e.hp); e.body.scale*=0.95;
- if(e.hp<=0){e.body.destroy();e.text.destroy();enemies=enemies.filter(x=>x!==e);money+=10;moneyText.setText("Money: "+money);}
+ e.hp-=dmg;
+ e.text.setText(e.hp);
+ e.setScale(e.scale*0.95);
+ if(e.hp<=0){
+  e.destroy(); e.text.destroy();
+  enemies=enemies.filter(x=>x!==e);
+  money+=10; moneyText.setText("Money: "+money);
+ }
 }
 
 function damageCrystal(i){
- enemies[i].body.destroy();enemies[i].text.destroy();
+ enemies[i].destroy(); enemies[i].text.destroy();
  enemies.splice(i,1); crystalHP--; hpText.setText("Crystal: "+crystalHP);
  if(crystalHP<=0) gameOver();
 }
