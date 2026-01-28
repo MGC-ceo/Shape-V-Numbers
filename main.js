@@ -169,25 +169,13 @@ function updateLasers(scene){
 
   towers.forEach(t => {
 
-    const rangeSq = (t.range + 15) * (t.range + 15); // buffer prevents flicker
+    // Damage tick timer
+    if (!t.nextTick) t.nextTick = now + t.rate;
 
-    // --- VALIDATE CURRENT TARGET ---
-    if (t.target && t.target.alive) {
-      const dx = t.target.x - t.x;
-      const dy = t.target.y - t.y;
-      const distSq = dx*dx + dy*dy;
+    if (now >= t.nextTick) {
+      t.nextTick = now + t.rate;
 
-      if (distSq > rangeSq) {
-        t.target = null;
-      }
-    } else {
-      t.target = null;
-    }
-
-    // --- ACQUIRE TARGET (furthest along path) ---
-    if (!t.target) {
-      let best = null;
-      let bestProgress = -1;
+      const rangeSq = t.range * t.range;
 
       enemies.forEach(e => {
         if (!e.alive) return;
@@ -197,44 +185,42 @@ function updateLasers(scene){
         const distSq = dx*dx + dy*dy;
 
         if (distSq <= rangeSq) {
-          const progress = e.index + (e.x / 800); // normalized forward progress
-          if (progress > bestProgress) {
-            bestProgress = progress;
-            best = e;
-          }
+          hitEnemy(e, t.dmg);
         }
       });
-
-      t.target = best;
     }
 
-    // --- NO TARGET ---
-    if (!t.target) {
-      if (t.beam) { t.beam.destroy(); t.beam = null; }
-      return;
-    }
+    // ---------------- VISUAL BEAM (OPTIONAL, DOES NOT CONTROL DAMAGE) ----------------
+    // Find ONE enemy just for beam drawing
+    let beamTarget = null;
+    let closestSq = Infinity;
 
-    // --- DRAW BEAM ---
-    let color = 0x00ffcc, width = 3;
-    if (t.dmg >= 5) { color = 0xffaa00; width = 5; }
-    else if (t.dmg <= 1) { color = 0xaa66ff; width = 2; }
+    enemies.forEach(e => {
+      if (!e.alive) return;
+      const dx = e.x - t.x;
+      const dy = e.y - t.y;
+      const distSq = dx*dx + dy*dy;
 
-    if (t.beam) t.beam.destroy();
+      if (distSq < closestSq && distSq <= t.range * t.range) {
+        closestSq = distSq;
+        beamTarget = e;
+      }
+    });
 
-    const ex = t.target.x;
-    const ey = t.target.y;
-    const angle = Phaser.Math.Angle.Between(t.x, t.y, ex, ey);
-    const startX = t.x + Math.cos(angle) * 14;
-    const startY = t.y + Math.sin(angle) * 14;
+    if (t.beam) { t.beam.destroy(); t.beam = null; }
 
-    t.beam = scene.add.line(0, 0, startX, startY, ex, ey, color)
-      .setLineWidth(width)
-      .setAlpha(0.95);
+    if (beamTarget) {
+      let color = 0x00ffcc, width = 3;
+      if (t.dmg >= 5) { color = 0xffaa00; width = 5; }
+      else if (t.dmg <= 1) { color = 0xaa66ff; width = 2; }
 
-    // --- PURE TIME DAMAGE ---
-    if (now - t.lastTick >= t.rate) {
-      t.lastTick = now;
-      hitEnemy(t.target, t.dmg);
+      const angle = Phaser.Math.Angle.Between(t.x, t.y, beamTarget.x, beamTarget.y);
+      const startX = t.x + Math.cos(angle) * 14;
+      const startY = t.y + Math.sin(angle) * 14;
+
+      t.beam = scene.add.line(0, 0, startX, startY, beamTarget.x, beamTarget.y, color)
+        .setLineWidth(width)
+        .setAlpha(0.9);
     }
   });
 }
