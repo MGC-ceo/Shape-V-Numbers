@@ -7,10 +7,37 @@
   <!-- Phaser Engine -->
   <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js"></script>
 
-  <!-- Your Game Code -->
+  <!-- Game Code -->
   <script src="main.js" defer></script>
+
+  <style>
+    body {
+      margin: 0;
+      background: #111;
+      overflow: hidden;
+      font-family: monospace;
+    }
+
+    #ui {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 10;
+    }
+
+    button {
+      padding: 6px 10px;
+      margin-left: 5px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+  </style>
 </head>
 
-<body style="margin:0; background:#111; overflow:hidden;">
+<body>
+  <div id="ui">
+    <button onclick="togglePause()">Pause</button>
+    <button onclick="restartGame()">Restart</button>
+  </div>
 </body>
 </html>
