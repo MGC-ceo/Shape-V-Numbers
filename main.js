@@ -9,9 +9,9 @@ const config = {
 new Phaser.Game(config);
 
 const SHAPES = {
-  circle:   { range:130, dmg:2,  rate:600,  color:0x00ffcc },
-  square:   { range:170, dmg:5,  rate:1400, color:0xffaa00 },
-  triangle: { range:90,  dmg:3,  rate:300,  color:0xaa66ff }
+  circle:   { range:130, dmg:2, rate:600,  color:0x00ffcc },
+  square:   { range:170, dmg:5, rate:1400, color:0xffaa00 },
+  triangle: { range:90,  dmg:3, rate:300,  color:0xaa66ff }
 };
 
 const path = [
@@ -21,11 +21,14 @@ const path = [
 let enemies = [];
 let towers = [];
 let wave = 1;
+let laserGraphics;
 
 function create(){
   drawPath(this);
 
-  // Spawn test towers
+  laserGraphics = this.add.graphics();
+
+  // Starter towers for testing
   addTower(this, 250, 250, "circle");
   addTower(this, 420, 180, "square");
   addTower(this, 500, 320, "triangle");
@@ -42,6 +45,7 @@ function create(){
 function update(time){
   moveEnemies();
   updateTowerDamage(time);
+  drawLasers();
 }
 
 /* ================= ENEMIES ================= */
@@ -69,7 +73,12 @@ function moveEnemies(){
     if(!e.alive) return;
 
     const next = path[e.pathIndex+1];
-    if(!next){ e.alive=false; e.body.destroy(); e.text.destroy(); return; }
+    if(!next){
+      e.alive=false;
+      e.body.destroy();
+      e.text.destroy();
+      return;
+    }
 
     const dx=next.x-e.x, dy=next.y-e.y;
     const d=Math.hypot(dx,dy);
@@ -92,7 +101,8 @@ function addTower(scene,x,y,type){
     range:s.range,
     dmg:s.dmg,
     rate:s.rate,
-    nextTick:0
+    nextTick:0,
+    type:type
   });
   scene.add.circle(x,y,14,s.color);
 }
@@ -109,6 +119,36 @@ function updateTowerDamage(time){
       const dx=e.x-t.x, dy=e.y-t.y;
       if(dx*dx+dy*dy <= rangeSq){
         damageEnemy(e,t.dmg);
+      }
+    });
+  });
+}
+
+/* ================= LASERS (VISUAL ONLY) ================= */
+
+function drawLasers(){
+  laserGraphics.clear();
+
+  towers.forEach(tower=>{
+    enemies.forEach(enemy=>{
+      if(!enemy.alive) return;
+
+      const dx = enemy.x - tower.x;
+      const dy = enemy.y - tower.y;
+      const distSq = dx*dx + dy*dy;
+
+      if(distSq <= tower.range * tower.range){
+        let color = 0x00ffcc;
+        let width = 2;
+
+        if(tower.type === "square"){ color = 0xffaa00; width = 4; }
+        if(tower.type === "triangle"){ color = 0xaa66ff; width = 1; }
+
+        laserGraphics.lineStyle(width, color, 0.9);
+        laserGraphics.beginPath();
+        laserGraphics.moveTo(tower.x, tower.y);
+        laserGraphics.lineTo(enemy.x, enemy.y);
+        laserGraphics.strokePath();
       }
     });
   });
