@@ -167,9 +167,24 @@ function tryPlaceTower(scene,x,y){
 }
 
 function addTower(scene,x,y,type){
-  const s=SHAPES[type];
+  const s = SHAPES[type];
   towers.push({x,y,range:s.range,dmg:s.dmg,rate:s.rate,nextTick:0,type});
-  scene.add.circle(x,y,14,s.color);
+
+  if(type === "circle"){
+    scene.add.circle(x,y,14,s.color).setStrokeStyle(2,0xffffff);
+  }
+
+  if(type === "square"){
+    scene.add.rectangle(x,y,28,28,s.color).setStrokeStyle(2,0xffffff);
+  }
+
+  if(type === "triangle"){
+    scene.add.polygon(x,y,[
+      0,-16,
+      -14,12,
+      14,12
+    ], s.color).setStrokeStyle(2,0xffffff);
+  }
 }
 
 function changeSelection(type){ selectedTower=type; selectText.setText("Selected: "+type.toUpperCase()); }
