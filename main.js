@@ -1,91 +1,84 @@
 const config = {
   type: Phaser.AUTO,
-  width: 800,
-  height: 600,
+  width: window.innerWidth,
+  height: window.innerHeight,
   backgroundColor: "#111",
-  scale: {
-    mode: Phaser.Scale.FIT,
-    autoCenter: Phaser.Scale.CENTER_BOTH
-  },
-  scene: [MenuScene, SoloScene]
+  scene: { preload, create, update }
 };
 
-new Phaser.Game(config);
+const game = new Phaser.Game(config);
 
-let level = 1;
+window.addEventListener("resize", () => {
+  game.scale.resize(window.innerWidth, window.innerHeight);
+});
 
-/* ================= MENU ================= */
+let paused = false;
+function togglePause(){ paused = !paused; }
+function restartGame(){ location.reload(); }
 
-function MenuScene(){ Phaser.Scene.call(this,{key:"MenuScene"}); }
-MenuScene.prototype = Object.create(Phaser.Scene.prototype);
-
-MenuScene.prototype.create = function(){
-  this.add.text(400,120,"SHAPE DEFENSE",{font:"48px Arial",color:"#fff"}).setOrigin(0.5);
-  this.add.text(400,180,"LEVEL "+level,{font:"24px Arial",color:"#00ffaa"}).setOrigin(0.5);
-
-  const play = this.add.text(400,300,"PLAY SOLO",{font:"36px Arial",color:"#fff"})
-    .setOrigin(0.5).setInteractive();
-
-  play.on("pointerdown",()=>this.scene.start("SoloScene"));
-
-  this.add.text(400,350,"More Content Soon",{font:"18px Arial",color:"#777"}).setOrigin(0.5);
-};
-
-/* ================= SOLO GAME ================= */
-
-function SoloScene(){ Phaser.Scene.call(this,{key:"SoloScene"}); }
-SoloScene.prototype = Object.create(Phaser.Scene.prototype);
-
+// ================= SHAPE STATS =================
 const SHAPES = {
-  circle:   { dmg:2, rate:600, range:130, color:0x00ffcc, cost:30 },
-  square:   { dmg:5, rate:1400, range:180, color:0xffaa00, cost:50 },
-  triangle: { dmg:1, rate:300, range:95, color:0xaa66ff, cost:20 }
+  circle:   { dmg:2, rate:600, range:140, color:0x00ffff },
+  square:   { dmg:4, rate:1200, range:220, color:0xffaa00 },
+  triangle: { dmg:2, rate:300, range:90, color:0xaa66ff }
 };
 
-let enemies, towers, money, wave, selectedShape;
-let moneyText, waveText, hpText;
-let path, crystal;
+let selectedShape = "circle";
 
-SoloScene.prototype.create = function(){
-  enemies = [];
-  towers = [];
-  money = 100;
-  wave = 1;
-  selectedShape = "circle";
+// ================= GAME STATE =================
+let enemies = [], towers = [];
+let path = [];
+let crystalHP = 20;
+let money = 100;
+let wave = 1;
 
-  buildPath(this);
+let moneyText, hpText, waveText;
+
+// ================= SCENE =================
+function preload(){}
+
+function create(){
+  buildPath();
+  drawPath(this);
   drawCrystal(this);
 
-  moneyText = this.add.text(10,10,"Money: 100",{color:"#fff"});
-  waveText = this.add.text(10,35,"Wave: 1",{color:"#fff"});
-  hpText = this.add.text(650,10,"Crystal: 20",{color:"#0ff"});
+  moneyText = this.add.text(20,20,"Money: 100",{color:"#fff"});
+  waveText  = this.add.text(20,50,"Wave: 1",{color:"#fff"});
+  hpText    = this.add.text(window.innerWidth-200,20,"Crystal: 20",{color:"#0ff"});
 
-  this.input.on("pointerdown",p=>placeTower(this,p.x,p.y));
-  this.input.keyboard.on("keydown-ONE",()=>selectedShape="circle");
-  this.input.keyboard.on("keydown-TWO",()=>selectedShape="square");
-  this.input.keyboard.on("keydown-THREE",()=>selectedShape="triangle");
+  this.input.keyboard.on("keydown-ONE", ()=> selectedShape="circle");
+  this.input.keyboard.on("keydown-TWO", ()=> selectedShape="square");
+  this.input.keyboard.on("keydown-THREE", ()=> selectedShape="triangle");
+
+  this.input.on("pointerdown", p => placeTower(this,p.x,p.y));
 
   spawnWave(this);
-};
+}
 
-SoloScene.prototype.update = function(time){
-  moveEnemies(this);
+function update(time){
+  if(paused) return;
+
+  moveEnemies();
   updateTowers(this,time);
-};
 
-/* ================= PATH ================= */
+  // Clean dead enemies safely
+  enemies = enemies.filter(e => e.alive);
+}
 
-function buildPath(scene){
+// ================= PATH =================
+function buildPath(){
   path = [
-    {x:0,y:400},
-    {x:200,y:400},
-    {x:350,y:300},
-    {x:550,y:400},
-    {x:800,y:400}
+    {x:0,y:window.innerHeight*0.65},
+    {x:window.innerWidth*0.3,y:window.innerHeight*0.65},
+    {x:window.innerWidth*0.5,y:window.innerHeight*0.45},
+    {x:window.innerWidth*0.7,y:window.innerHeight*0.65},
+    {x:window.innerWidth-120,y:window.innerHeight*0.65}
   ];
+}
 
+function drawPath(scene){
   const g = scene.add.graphics();
-  g.lineStyle(30,0x333333,1);
+  g.lineStyle(40,0x333333,1);
   g.beginPath();
   g.moveTo(path[0].x,path[0].y);
   for(let i=1;i<path.length;i++) g.lineTo(path[i].x,path[i].y);
@@ -93,92 +86,103 @@ function buildPath(scene){
 }
 
 function drawCrystal(scene){
-  crystal = scene.add.circle(760,400,22,0x00ffff);
+  const c = scene.add.circle(path[path.length-1].x+60,path[path.length-1].y,25,0x00ffff);
+  scene.tweens.add({targets:c,scale:1.2,yoyo:true,repeat:-1,duration:700});
 }
 
-/* ================= ENEMIES ================= */
-
+// ================= ENEMIES =================
 function spawnWave(scene){
-  for(let i=0;i<5+wave;i++){
-    const e = { hp:12+wave*2, speed:0.7+wave*0.05, index:0, alive:true };
-    e.body = scene.add.circle(path[0].x,path[0].y,14,0xff5555);
-    e.text = scene.add.text(e.body.x-8,e.body.y-10,e.hp,{color:"#fff"});
+  for(let i=0;i<wave+2;i++){
+    const e = { hp:10+wave, speed:1.2, index:0, alive:true };
+    e.body = scene.add.circle(path[0].x,path[0].y,16,0xff5555);
+    e.text = scene.add.text(e.body.x-10,e.body.y-10,e.hp,{color:"#fff"});
     enemies.push(e);
   }
 }
 
-function moveEnemies(scene){
+function moveEnemies(){
   enemies.forEach(e=>{
     if(!e.alive) return;
+
     const next = path[e.index+1];
     if(!next){
       e.alive=false;
       e.body.destroy(); e.text.destroy();
+      crystalHP--; hpText.setText("Crystal: "+crystalHP);
       return;
     }
+
     const dx=next.x-e.body.x, dy=next.y-e.body.y;
     const d=Math.hypot(dx,dy);
     e.body.x += (dx/d)*e.speed;
     e.body.y += (dy/d)*e.speed;
-    e.text.setPosition(e.body.x-8,e.body.y-10);
+    e.text.setPosition(e.body.x-10,e.body.y-10);
+
     if(d<4) e.index++;
   });
 }
 
-/* ================= TOWERS ================= */
-
+// ================= TOWERS =================
 function placeTower(scene,x,y){
-  if(towers.length>=25) return;
-  const s=SHAPES[selectedShape];
-  if(money<s.cost) return;
+  if(towers.length >= 25) return;
 
-  money-=s.cost;
-  moneyText.setText("Money: "+money);
+  const s = SHAPES[selectedShape];
+  const t = { x,y,range:s.range,dmg:s.dmg,rate:s.rate,last:0,beam:null };
 
-  const t={x,y,range:s.range,dmg:s.dmg,rate:s.rate,nextTick:0,shape:selectedShape,beam:null};
+  if(selectedShape==="circle"){
+    t.body = scene.add.circle(x,y,18,s.color).setStrokeStyle(3,0xffffff);
+  }
+  if(selectedShape==="square"){
+    t.body = scene.add.rectangle(x,y,34,34,s.color).setStrokeStyle(3,0xffffff);
+  }
+  if(selectedShape==="triangle"){
+    const size = 36;
+    const h = size * Math.sqrt(3) / 2;
+    t.body = scene.add.polygon(x,y,[0,-h/2,-size/2,h/2,size/2,h/2],s.color)
+      .setStrokeStyle(3,0xffffff);
+  }
 
-  if(selectedShape==="circle")
-    t.body=scene.add.circle(x,y,15,s.color).setStrokeStyle(2,0xffffff);
-  if(selectedShape==="square")
-    t.body=scene.add.rectangle(x,y,28,28,s.color).setStrokeStyle(2,0xffffff);
-  if(selectedShape==="triangle")
-    t.body=scene.add.triangle(x,y,0,30,15,0,30,30,s.color).setStrokeStyle(2,0xffffff);
+  // Range indicator
+  t.rangeRing = scene.add.circle(x,y,t.range,0xffffff,0.04)
+    .setStrokeStyle(1,0xffffff,0.15);
 
   towers.push(t);
 }
 
-/* ================= DAMAGE SYSTEM (STABLE) ================= */
-
+// ================= TOWER LOGIC =================
 function updateTowers(scene,time){
   towers.forEach(t=>{
+    const target = enemies.find(e =>
+      e.alive && Phaser.Math.Distance.Between(t.x,t.y,e.body.x,e.body.y)<=t.range
+    );
 
-    // REAL damage = range check
-    enemies.forEach(e=>{
-      if(!e.alive) return;
-      const dist = Phaser.Math.Distance.Between(t.x,t.y,e.body.x,e.body.y);
-      if(dist<=t.range && time>t.nextTick){
-        t.nextTick=time+t.rate;
-        e.hp-=t.dmg;
-        e.text.setText(e.hp);
-        if(e.hp<=0){
-          e.alive=false;
-          e.body.destroy();
-          e.text.destroy();
-          money+=10;
-          moneyText.setText("Money: "+money);
+    // Laser VISUAL ONLY
+    if(target){
+      if(t.beam) t.beam.destroy();
+      t.beam = scene.add.line(0,0,t.x,t.y,target.body.x,target.body.y,0xffffff)
+        .setLineWidth(2).setAlpha(0.5);
+    }else{
+      if(t.beam){ t.beam.destroy(); t.beam=null; }
+    }
+
+    // REAL DAMAGE = RANGE CHECK ONLY
+    if(time - t.last > t.rate){
+      t.last = time;
+
+      enemies.forEach(e=>{
+        if(e.alive && Phaser.Math.Distance.Between(t.x,t.y,e.body.x,e.body.y)<=t.range){
+          e.hp -= t.dmg;
+          e.text.setText(e.hp);
+
+          if(e.hp<=0){
+            e.alive=false;
+            e.body.destroy();
+            e.text.destroy();
+            money+=10;
+            moneyText.setText("Money: "+money);
+          }
         }
-      }
-    });
-
-    // LASER VISUAL ONLY
-    if(t.beam){t.beam.destroy();t.beam=null;}
-    const target=enemies.find(e=>e.alive && Phaser.Math.Distance.Between(t.x,t.y,e.body.x,e.body.y)<=t.range);
-    if(!target) return;
-
-    let color=0x00ffcc,width=2;
-    if(t.shape==="square"){color=0xffaa00;width=4;}
-    if(t.shape==="triangle"){color=0xaa66ff;width=1;}
-
-    t.beam=scene.add.line(0,0,t.x,t.y,target.body.x,target.body.y,color).setLineWidth(width).setAlpha(0.7);
+      });
+    }
   });
 }
