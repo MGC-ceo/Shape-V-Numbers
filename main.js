@@ -72,6 +72,9 @@ function update(){
  if(paused) return;
  moveEnemies();
  updateLasers(this);
+
+ // Remove dead enemies cleanly after logic
+ enemies = enemies.filter(e => e.alive !== false);
 }
 
 // ---------------- PATH ----------------
@@ -93,7 +96,7 @@ function spawnWave(scene){
 
 function spawnEnemy(scene){
  const type=Phaser.Utils.Array.GetRandom(ENEMY_TYPES);
- const e={hp:type.hp+wave,speed:type.speed,index:0,x:path[0].x,y:path[0].y};
+ const e={hp:type.hp+wave,speed:type.speed,index:0,x:path[0].x,y:path[0].y,alive:true};
  e.body=scene.add.circle(e.x,e.y,16,type.color);
  e.text=scene.add.text(e.x-6,e.y-8,e.hp,{color:"#fff"});
  enemies.push(e);
@@ -101,6 +104,8 @@ function spawnEnemy(scene){
 
 function moveEnemies(){
  enemies.forEach((e,i)=>{
+  if(!e.alive) return;
+
   const next=path[e.index+1];
   if(!next){damageCrystal(i);return;}
   const dx=next.x-e.x,dy=next.y-e.y,d=Math.hypot(dx,dy);
@@ -149,11 +154,12 @@ function updateLasers(scene){
 
  towers.forEach(t=>{
 
-  // Validate target every frame
-  if(!t.target || !enemies.includes(t.target)){
+  // Drop dead targets instantly
+  if(t.target && !t.target.alive){
     t.target = null;
   }
 
+  // Validate range
   if(t.target){
     const dist = Phaser.Math.Distance.Between(t.x,t.y,t.target.x,t.target.y);
     if(dist > t.range){
@@ -161,31 +167,27 @@ function updateLasers(scene){
     }
   }
 
-  // Acquire new target if needed
+  // Acquire new target
   if(!t.target){
     t.target = enemies.find(e =>
-      Phaser.Math.Distance.Between(t.x,t.y,e.x,e.y) <= t.range
+      e.alive && Phaser.Math.Distance.Between(t.x,t.y,e.x,e.y) <= t.range
     );
 
-    // Reset tick so new target gets hit instantly
     if(t.target){
-      t.lastTick = 0;
+      t.lastTick = 0; // instant first hit
     }
   }
 
-  // No target → remove beam
   if(!t.target){
     if(t.beam){ t.beam.destroy(); t.beam = null; }
     return;
   }
 
-  // Beam style
   let color = 0x00ffcc;
   let width = 3;
   if(t.dmg >= 5){ color = 0xffaa00; width = 5; }
   else if(t.dmg <= 1){ color = 0xaa66ff; width = 2; }
 
-  // Redraw beam cleanly
   if(t.beam) t.beam.destroy();
 
   const angle = Phaser.Math.Angle.Between(t.x, t.y, t.target.x, t.target.y);
@@ -196,7 +198,6 @@ function updateLasers(scene){
     .setLineWidth(width)
     .setAlpha(0.95);
 
-  // Continuous damage tick
   if(now - t.lastTick >= t.rate){
     t.lastTick = now;
     hitEnemy(t.target, t.dmg);
@@ -207,21 +208,23 @@ function updateLasers(scene){
 // ---------------- DAMAGE ----------------
 
 function hitEnemy(e,dmg){
+ if(!e.alive) return;
+
  e.hp-=dmg;
  e.text.setText(e.hp);
  e.body.setScale(e.body.scaleX*0.95);
 
  if(e.hp<=0){
+  e.alive=false;
   e.body.destroy();
   e.text.destroy();
-  enemies=enemies.filter(x=>x!==e);
   money+=10; moneyText.setText("Money: "+money);
  }
 }
 
 function damageCrystal(i){
  enemies[i].body.destroy(); enemies[i].text.destroy();
- enemies.splice(i,1);
+ enemies[i].alive=false;
  crystalHP--; hpText.setText("Crystal: "+crystalHP);
  if(crystalHP<=0) gameOver();
 }
