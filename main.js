@@ -145,39 +145,52 @@ function placeTowerIfValid(scene,x,y){
 // ---------------- CONTINUOUS LASERS ----------------
 
 function updateLasers(scene){
- const now=Date.now();
+ const now = Date.now();
 
  towers.forEach(t=>{
 
-  // Acquire or validate target
+  // Find or validate target
   if(!t.target || !enemies.includes(t.target) ||
      Phaser.Math.Distance.Between(t.x,t.y,t.target.x,t.target.y) > t.range){
-      t.target=enemies.find(e=>Phaser.Math.Distance.Between(t.x,t.y,e.x,e.y)<=t.range);
+      t.target = enemies.find(e =>
+        Phaser.Math.Distance.Between(t.x,t.y,e.x,e.y) <= t.range
+      );
   }
 
   // Remove beam if no target
   if(!t.target){
-    if(t.beam){t.beam.destroy(); t.beam=null;}
+    if(t.beam){ t.beam.destroy(); t.beam = null; }
     return;
   }
 
-  // Create beam if needed
+  // Beam color + width by tower type
+  let color = 0xffffff;
+  let width = 2;
+
+  if(t.dmg >= 5){ color = 0xffaa00; width = 5; }      // square
+  else if(t.dmg <= 1){ color = 0xaa66ff; width = 2; } // triangle
+  else { color = 0x00ffcc; width = 3; }               // circle
+
+  // Create beam if missing
   if(!t.beam){
-    let width=2;
-    if(t.dmg>=5) width=4;
-    if(t.dmg<=1) width=1;
-    t.beam=scene.add.line(0,0,t.x,t.y,t.target.x,t.target.y,0xffffff)
+    t.beam = scene.add.line(0,0,0,0,0,0,color)
       .setLineWidth(width)
       .setAlpha(0.9);
   }
 
+  // Calculate direction offset so beam starts at tower EDGE
+  const angle = Phaser.Math.Angle.Between(t.x, t.y, t.target.x, t.target.y);
+  const startX = t.x + Math.cos(angle) * 14;
+  const startY = t.y + Math.sin(angle) * 14;
+
   // Update beam position
-  t.beam.setTo(t.x,t.y,t.target.x,t.target.y);
+  t.beam.setTo(startX, startY, t.target.x, t.target.y);
+  t.beam.setStrokeStyle(width, color);
 
   // Damage tick
   if(now - t.lastTick >= t.rate){
-    t.lastTick=now;
-    hitEnemy(t.target,t.dmg);
+    t.lastTick = now;
+    hitEnemy(t.target, t.dmg);
   }
  });
 }
