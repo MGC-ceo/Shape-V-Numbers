@@ -82,6 +82,7 @@ enemies = enemies.filter(e => {
  }
  return true;
 });
+}
 
 // ---------------- PATH ----------------
 
