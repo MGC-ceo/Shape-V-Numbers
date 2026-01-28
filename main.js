@@ -145,32 +145,47 @@ function placeTowerIfValid(scene,x,y){
 // ---------------- CONTINUOUS LASERS ----------------
 
 function updateLasers(scene){
- const now = scene.time.now; // Phaser clock, not Date.now()
+ const now = scene.time.now;
 
  towers.forEach(t=>{
 
-  // Find or validate target
-  if(!t.target || !enemies.includes(t.target) ||
-     Phaser.Math.Distance.Between(t.x,t.y,t.target.x,t.target.y) > t.range){
-      t.target = enemies.find(e =>
-        Phaser.Math.Distance.Between(t.x,t.y,e.x,e.y) <= t.range
-      );
+  // Validate target every frame
+  if(!t.target || !enemies.includes(t.target)){
+    t.target = null;
   }
 
-  // Remove beam if no target
+  if(t.target){
+    const dist = Phaser.Math.Distance.Between(t.x,t.y,t.target.x,t.target.y);
+    if(dist > t.range){
+      t.target = null;
+    }
+  }
+
+  // Acquire new target if needed
+  if(!t.target){
+    t.target = enemies.find(e =>
+      Phaser.Math.Distance.Between(t.x,t.y,e.x,e.y) <= t.range
+    );
+
+    // Reset tick so new target gets hit instantly
+    if(t.target){
+      t.lastTick = 0;
+    }
+  }
+
+  // No target → remove beam
   if(!t.target){
     if(t.beam){ t.beam.destroy(); t.beam = null; }
     return;
   }
 
-  // Beam color + width by tower type
+  // Beam style
   let color = 0x00ffcc;
   let width = 3;
+  if(t.dmg >= 5){ color = 0xffaa00; width = 5; }
+  else if(t.dmg <= 1){ color = 0xaa66ff; width = 2; }
 
-  if(t.dmg >= 5){ color = 0xffaa00; width = 5; }      // square
-  else if(t.dmg <= 1){ color = 0xaa66ff; width = 2; } // triangle
-
-  // Destroy and recreate beam every frame for clean visuals
+  // Redraw beam cleanly
   if(t.beam) t.beam.destroy();
 
   const angle = Phaser.Math.Angle.Between(t.x, t.y, t.target.x, t.target.y);
@@ -179,9 +194,9 @@ function updateLasers(scene){
 
   t.beam = scene.add.line(0,0,startX,startY,t.target.x,t.target.y,color)
     .setLineWidth(width)
-    .setAlpha(0.9);
+    .setAlpha(0.95);
 
-  // Damage tick using game clock
+  // Continuous damage tick
   if(now - t.lastTick >= t.rate){
     t.lastTick = now;
     hitEnemy(t.target, t.dmg);
