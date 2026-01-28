@@ -10,8 +10,10 @@ const game = new Phaser.Game(config);
 
 window.addEventListener("resize", () => {
   game.scale.resize(window.innerWidth, window.innerHeight);
+  buildPath();
 });
 
+// ================= CONTROLS =================
 let paused = false;
 function togglePause(){ paused = !paused; }
 function restartGame(){ location.reload(); }
@@ -73,12 +75,14 @@ function buildPath(){
 }
 
 function drawPath(scene){
+  if(scene.pathGraphic) scene.pathGraphic.destroy();
   const g = scene.add.graphics();
   g.lineStyle(40,0x333333,1);
   g.beginPath();
   g.moveTo(path[0].x,path[0].y);
   for(let i=1;i<path.length;i++) g.lineTo(path[i].x,path[i].y);
   g.strokePath();
+  scene.pathGraphic = g;
 }
 
 function drawCrystal(scene){
@@ -116,63 +120,70 @@ function moveEnemies(){
 }
 
 // ================= TOWERS =================
-
 function placeTower(scene,x,y){
   if(towers.length >= 25) return;
 
   const s = SHAPES[selectedShape];
-  const t = { x,y,range:s.range,dmg:s.dmg,rate:s.rate,last:0,beam:null };
+  const t = { x,y,range:s.range,dmg:s.dmg,rate:s.rate,last:0,beam:null,shape:selectedShape };
 
-  // Draw TRUE shape visuals
   if(selectedShape==="circle"){
-    t.body = scene.add.circle(x,y,18,s.color)
-      .setStrokeStyle(3,0xffffff);
+    t.body = scene.add.circle(x,y,18,s.color).setStrokeStyle(3,0xffffff);
   }
 
   if(selectedShape==="square"){
-    t.body = scene.add.rectangle(x,y,34,34,s.color)
-      .setStrokeStyle(3,0xffffff);
+    t.body = scene.add.rectangle(x,y,34,34,s.color).setStrokeStyle(3,0xffffff);
   }
 
   if(selectedShape==="triangle"){
     const size = 36;
     const h = size * Math.sqrt(3) / 2;
-    t.body = scene.add.polygon(x,y,[
-      0,-h/2,
-      -size/2,h/2,
-      size/2,h/2
-    ], s.color).setStrokeStyle(3,0xffffff);
+    t.body = scene.add.polygon(x,y,[0,-h/2,-size/2,h/2,size/2,h/2], s.color).setStrokeStyle(3,0xffffff);
   }
 
-  // Add soft glow ring for range clarity
-  t.rangeRing = scene.add.circle(x,y,t.range,0xffffff,0.05)
-    .setStrokeStyle(1,0xffffff,0.15);
-
+  t.rangeRing = scene.add.circle(x,y,t.range,0xffffff,0.05).setStrokeStyle(1,0xffffff,0.15);
   towers.push(t);
 }
 
-// ================= TOWER LOGIC =================
+// ================= CORE DAMAGE SYSTEM =================
 function updateTowers(scene,time){
   towers.forEach(t=>{
-    const target = enemies.find(e=>e.alive && Phaser.Math.Distance.Between(t.x,t.y,e.body.x,e.body.y)<=t.range);
-    if(!target){ if(t.beam){t.beam.destroy();t.beam=null;} return; }
 
-    // Laser visual
-    if(t.beam) t.beam.destroy();
-    t.beam = scene.add.line(0,0,t.x,t.y,target.body.x,target.body.y,0xffffff).setLineWidth(2).setAlpha(0.7);
+    // 🔥 REAL DAMAGE SYSTEM (area based)
+    enemies.forEach(enemy=>{
+      if(!enemy.alive) return;
 
-    // Damage tick
-    if(time - t.last > t.rate){
-      t.last = time;
-      target.hp -= t.dmg;
-      target.text.setText(target.hp);
-      if(target.hp<=0){
-        target.alive=false;
-        target.body.destroy();
-        target.text.destroy();
-        money+=10;
-        moneyText.setText("Money: "+money);
+      const dist = Phaser.Math.Distance.Between(t.x, t.y, enemy.body.x, enemy.body.y);
+      if(dist <= t.range && time - t.last >= t.rate){
+        t.last = time;
+        enemy.hp -= t.dmg;
+        enemy.text.setText(enemy.hp);
+
+        if(enemy.hp <= 0){
+          enemy.alive = false;
+          enemy.body.destroy();
+          enemy.text.destroy();
+          money += 10;
+          moneyText.setText("Money: " + money);
+        }
       }
-    }
+    });
+
+    // ✨ LASERS VISUAL ONLY
+    if(t.beam){ t.beam.destroy(); t.beam = null; }
+
+    const visualTarget = enemies.find(e =>
+      e.alive && Phaser.Math.Distance.Between(t.x,t.y,e.body.x,e.body.y)<=t.range
+    );
+
+    if(!visualTarget) return;
+
+    let color = 0x00ffff;
+    let width = 2;
+    if(t.shape==="square"){ color = 0xffaa00; width = 4; }
+    if(t.shape==="triangle"){ color = 0xaa66ff; width = 1; }
+
+    t.beam = scene.add.line(0,0,t.x,t.y,visualTarget.body.x,visualTarget.body.y,color)
+      .setLineWidth(width)
+      .setAlpha(0.8);
   });
 }
