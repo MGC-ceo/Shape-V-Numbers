@@ -194,7 +194,6 @@ function updateLasers(scene){
 
   if(t.beam) t.beam.destroy();
 
-  // LOCK TO RENDERED POSITION
   const ex = t.target.body.x;
   const ey = t.target.body.y;
 
@@ -206,20 +205,22 @@ function updateLasers(scene){
     .setLineWidth(width)
     .setAlpha(0.95);
 
-  // DAMAGE TICK ONLY (no scale distortion)
+  // DAMAGE TICK
   if(now - t.lastTick >= t.rate){
     t.lastTick = now;
     hitEnemy(t.target, t.dmg);
 
-    // small flash effect instead of scale wobble
-   if(t.target.alive){
-  scene.tweens.add({
-    targets: t.target.body,
-    alpha: 0.6,
-    duration: 50,
-    yoyo: true
-  });
-}
+    // Flash feedback ONLY if still alive
+    if(t.target.alive){
+      scene.tweens.add({
+        targets: t.target.body,
+        alpha: 0.6,
+        duration: 50,
+        yoyo: true
+      });
+    }
+  }
+
  });
 }
 
