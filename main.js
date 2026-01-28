@@ -145,7 +145,7 @@ function placeTowerIfValid(scene,x,y){
 // ---------------- CONTINUOUS LASERS ----------------
 
 function updateLasers(scene){
- const now = Date.now();
+ const now = scene.time.now; // Phaser clock, not Date.now()
 
  towers.forEach(t=>{
 
@@ -164,30 +164,24 @@ function updateLasers(scene){
   }
 
   // Beam color + width by tower type
-  let color = 0xffffff;
-  let width = 2;
+  let color = 0x00ffcc;
+  let width = 3;
 
   if(t.dmg >= 5){ color = 0xffaa00; width = 5; }      // square
   else if(t.dmg <= 1){ color = 0xaa66ff; width = 2; } // triangle
-  else { color = 0x00ffcc; width = 3; }               // circle
 
-  // Create beam if missing
-  if(!t.beam){
-    t.beam = scene.add.line(0,0,0,0,0,0,color)
-      .setLineWidth(width)
-      .setAlpha(0.9);
-  }
+  // Destroy and recreate beam every frame for clean visuals
+  if(t.beam) t.beam.destroy();
 
-  // Calculate direction offset so beam starts at tower EDGE
   const angle = Phaser.Math.Angle.Between(t.x, t.y, t.target.x, t.target.y);
   const startX = t.x + Math.cos(angle) * 14;
   const startY = t.y + Math.sin(angle) * 14;
 
-  // Update beam position
-  t.beam.setTo(startX, startY, t.target.x, t.target.y);
-  t.beam.setStrokeStyle(width, color);
+  t.beam = scene.add.line(0,0,startX,startY,t.target.x,t.target.y,color)
+    .setLineWidth(width)
+    .setAlpha(0.9);
 
-  // Damage tick
+  // Damage tick using game clock
   if(now - t.lastTick >= t.rate){
     t.lastTick = now;
     hitEnemy(t.target, t.dmg);
