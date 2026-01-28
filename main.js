@@ -212,13 +212,14 @@ function updateLasers(scene){
     hitEnemy(t.target, t.dmg);
 
     // small flash effect instead of scale wobble
-    scene.tweens.add({
-      targets: t.target.body,
-      alpha: 0.6,
-      duration: 50,
-      yoyo: true
-    });
-  }
+   if(t.target.alive){
+  scene.tweens.add({
+    targets: t.target.body,
+    alpha: 0.6,
+    duration: 50,
+    yoyo: true
+  });
+}
  });
 }
 
