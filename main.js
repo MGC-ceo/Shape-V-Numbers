@@ -154,12 +154,10 @@ function updateLasers(scene){
 
  towers.forEach(t=>{
 
-  // Drop dead targets instantly
   if(t.target && !t.target.alive){
     t.target = null;
   }
 
-  // Validate range
   if(t.target){
     const dist = Phaser.Math.Distance.Between(t.x,t.y,t.target.x,t.target.y);
     if(dist > t.range){
@@ -167,14 +165,13 @@ function updateLasers(scene){
     }
   }
 
-  // Acquire new target
   if(!t.target){
     t.target = enemies.find(e =>
       e.alive && Phaser.Math.Distance.Between(t.x,t.y,e.x,e.y) <= t.range
     );
 
     if(t.target){
-      t.lastTick = 0; // instant first hit
+      t.lastTick = 0;
     }
   }
 
@@ -198,6 +195,10 @@ function updateLasers(scene){
     .setLineWidth(width)
     .setAlpha(0.95);
 
+  // ✨ VISUAL FEEDBACK EVERY FRAME (makes hits feel real)
+  t.target.body.setScale(0.95 + Math.sin(now * 0.02) * 0.03);
+
+  // REAL DAMAGE TICK
   if(now - t.lastTick >= t.rate){
     t.lastTick = now;
     hitEnemy(t.target, t.dmg);
