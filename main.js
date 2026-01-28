@@ -130,11 +130,18 @@ function shoot(scene,t,target){
 
 // DAMAGE
 function hitEnemy(e,dmg){
- e.hp-=dmg; e.text.setText(e.hp); e.body.scale*=0.95;
- if(e.hp<=0){
-  e.body.destroy(); e.text.destroy();
-  enemies=enemies.filter(x=>x!==e);
-  money+=10; moneyText.setText("Money: "+money);
+ e.hp -= dmg;
+ e.text.setText(e.hp);
+
+ // shrink enemy safely
+ e.body.setScale(e.body.scaleX * 0.95);
+
+ if(e.hp <= 0){
+  e.body.destroy();
+  e.text.destroy();
+  enemies = enemies.filter(x => x !== e);
+  money += 10;
+  moneyText.setText("Money: " + money);
  }
 }
 
