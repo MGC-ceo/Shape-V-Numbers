@@ -17,6 +17,17 @@ new Phaser.Game(config);
 
 let playerLevel = 1;
 
+function saveProgress(level){
+  localStorage.setItem("shapeDefenseLevel", level);
+}
+
+function loadProgress(){
+  const saved = localStorage.getItem("shapeDefenseLevel");
+  return saved ? parseInt(saved) : 1;
+}
+
+let playerLevel = loadProgress();
+
 /* ================= MENU SCENE ================= */
 
 function MenuScene(){ Phaser.Scene.call(this,{key:"MenuScene"}); }
@@ -26,7 +37,8 @@ MenuScene.prototype.create = function(){
 
   this.add.text(400,80,"SHAPE DEFENSE",{fontSize:"42px",color:"#ffffff"}).setOrigin(0.5);
 
-  this.levelText = this.add.text(400,130,"LEVEL: "+playerLevel,{fontSize:"20px",color:"#00ffcc"}).setOrigin(0.5);
+ playerLevel = loadProgress(); // load latest save
+this.levelText = this.add.text(400,130,"LEVEL: "+playerLevel,{fontSize:"20px",color:"#00ffcc"}).setOrigin(0.5);
 
   const playBtn = this.add.text(400,250,"PLAY",{fontSize:"36px",color:"#ffffff"}).setOrigin(0.5).setInteractive();
   playBtn.on("pointerdown", ()=>this.scene.start("SoloScene"));
@@ -251,10 +263,17 @@ function damageEnemy(e,dmg){
 }
 
 function damageCrystal(scene,amount){
-  crystalHP-=amount;
-  hpText.setText("Crystal HP: "+crystalHP);
-  if(crystalHP<=0){
-    if(wave-1 > playerLevel) playerLevel = wave-1;
+  crystalHP -= amount;
+  hpText.setText("Crystal HP: " + crystalHP);
+
+  if(crystalHP <= 0){
+    const reachedLevel = wave - 1;
+
+    if(reachedLevel > playerLevel){
+      playerLevel = reachedLevel;
+      saveProgress(playerLevel); // 💾 SAVE HERE
+    }
+
     scene.scene.start("MenuScene");
   }
 }
