@@ -104,7 +104,14 @@ function spawnWave(scene){
 
 function spawnEnemy(scene){
   const type=Phaser.Utils.Array.GetRandom(ENEMY_TYPES);
-  const e={hp:type.hp+wave,speed:type.speed,index:0,x:path[0].x,y:path[0].y,alive:true};
+  const e={
+    hp:type.hp+wave,
+    speed:type.speed,
+    index:0,
+    x:path[0].x,
+    y:path[0].y,
+    alive:true
+  };
   e.body=scene.add.circle(e.x,e.y,16,type.color);
   e.text=scene.add.text(e.x-6,e.y-8,e.hp,{color:"#fff"});
   enemies.push(e);
@@ -137,15 +144,7 @@ function selectShape(type){
 
 function placeTower(scene,x,y,type){
   const s=SHAPES[type];
-  const t={
-    x,y,
-    dmg:s.dmg,
-    rate:s.rate,
-    lastTick:0,
-    range:s.range,
-    beam:null,
-    target:null
-  };
+  const t={ x,y,dmg:s.dmg,rate:s.rate,lastTick:0,range:s.range,beam:null,target:null };
   t.body=scene.add.circle(x,y,14,s.color);
   towers.push(t);
 }
@@ -163,14 +162,14 @@ function placeTowerIfValid(scene,x,y){
   placeTower(scene,x,y,selectedShape);
 }
 
-// ---------------- LASERS (FIXED TARGET LOCK) ----------------
+// ---------------- LASERS (FINAL TARGET LOCK FIX) ----------------
 
 function updateLasers(scene){
   const now=scene.time.now;
 
   towers.forEach(t=>{
 
-    // Keep current target if valid
+    // Validate current target
     if(t.target && t.target.alive){
       const d=Phaser.Math.Distance.Between(t.x,t.y,t.target.x,t.target.y);
       if(d>t.range) t.target=null;
@@ -178,14 +177,25 @@ function updateLasers(scene){
       t.target=null;
     }
 
-    // Acquire only if no target
+    // Acquire NEW target ONLY if none
     if(!t.target){
-      for(let e of enemies){
-        if(e.alive && Phaser.Math.Distance.Between(t.x,t.y,e.x,e.y)<=t.range){
-          t.target=e;
-          break;
+      let best=null;
+      let bestProgress=-1;
+
+      enemies.forEach(e=>{
+        if(!e.alive) return;
+        const d=Phaser.Math.Distance.Between(t.x,t.y,e.x,e.y);
+        if(d<=t.range){
+          // Progress = path index + closeness to next point
+          const progress=e.index + (e.x/path[e.index+1]?.x || 0);
+          if(progress>bestProgress){
+            bestProgress=progress;
+            best=e;
+          }
         }
-      }
+      });
+
+      t.target=best;
     }
 
     if(!t.target){
@@ -209,9 +219,9 @@ function updateLasers(scene){
       .setLineWidth(width)
       .setAlpha(0.95);
 
-    // 🔥 DAMAGE TICK — NO RESET BUG
-    if(now-t.lastTick>=t.rate){
-      t.lastTick=now;
+    // PURE TIME-BASED DAMAGE (NO RESETS)
+    if(now - t.lastTick >= t.rate){
+      t.lastTick = now;
       hitEnemy(t.target,t.dmg);
     }
   });
