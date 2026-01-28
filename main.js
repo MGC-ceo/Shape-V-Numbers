@@ -24,7 +24,7 @@ function loadProgress(){
   return saved ? parseInt(saved) : 1;
 }
 
-let playerLevel = loadProgress();
+let playerLevel = loadProgress(); // ONLY DECLARED ONCE
 
 /* ================= MENU SCENE ================= */
 
@@ -124,8 +124,7 @@ SoloScene.prototype.update = function(time){
   drawLasers();
 };
 
-/* ========== CORE GAME LOGIC (UNCHANGED) ========== */
-// (Everything below remains the same as your working version)
+/* ================= GAME LOGIC ================= */
 
 function spawnWave(scene){
   const isBossWave = wave % 5 === 0;
