@@ -165,64 +165,76 @@ function placeTowerIfValid(scene,x,y){
 // ---------------- LASERS (FINAL TARGET LOCK FIX) ----------------
 
 function updateLasers(scene){
-  const now=scene.time.now;
+  const now = scene.time.now;
 
-  towers.forEach(t=>{
+  towers.forEach(t => {
 
-    // Validate current target
-    if(t.target && t.target.alive){
-      const d=Phaser.Math.Distance.Between(t.x,t.y,t.target.x,t.target.y);
-      if(d>t.range) t.target=null;
+    const rangeSq = (t.range + 15) * (t.range + 15); // buffer prevents flicker
+
+    // --- VALIDATE CURRENT TARGET ---
+    if (t.target && t.target.alive) {
+      const dx = t.target.x - t.x;
+      const dy = t.target.y - t.y;
+      const distSq = dx*dx + dy*dy;
+
+      if (distSq > rangeSq) {
+        t.target = null;
+      }
     } else {
-      t.target=null;
+      t.target = null;
     }
 
-    // Acquire NEW target ONLY if none
-    if(!t.target){
-      let best=null;
-      let bestProgress=-1;
+    // --- ACQUIRE TARGET (furthest along path) ---
+    if (!t.target) {
+      let best = null;
+      let bestProgress = -1;
 
-      enemies.forEach(e=>{
-        if(!e.alive) return;
-        const d=Phaser.Math.Distance.Between(t.x,t.y,e.x,e.y);
-        if(d<=t.range){
-          // Progress = path index + closeness to next point
-          const progress=e.index + (e.x/path[e.index+1]?.x || 0);
-          if(progress>bestProgress){
-            bestProgress=progress;
-            best=e;
+      enemies.forEach(e => {
+        if (!e.alive) return;
+
+        const dx = e.x - t.x;
+        const dy = e.y - t.y;
+        const distSq = dx*dx + dy*dy;
+
+        if (distSq <= rangeSq) {
+          const progress = e.index + (e.x / 800); // normalized forward progress
+          if (progress > bestProgress) {
+            bestProgress = progress;
+            best = e;
           }
         }
       });
 
-      t.target=best;
+      t.target = best;
     }
 
-    if(!t.target){
-      if(t.beam){ t.beam.destroy(); t.beam=null; }
+    // --- NO TARGET ---
+    if (!t.target) {
+      if (t.beam) { t.beam.destroy(); t.beam = null; }
       return;
     }
 
-    let color=0x00ffcc, width=3;
-    if(t.dmg>=5){ color=0xffaa00;width=5; }
-    else if(t.dmg<=1){ color=0xaa66ff;width=2; }
+    // --- DRAW BEAM ---
+    let color = 0x00ffcc, width = 3;
+    if (t.dmg >= 5) { color = 0xffaa00; width = 5; }
+    else if (t.dmg <= 1) { color = 0xaa66ff; width = 2; }
 
-    if(t.beam) t.beam.destroy();
+    if (t.beam) t.beam.destroy();
 
-    const ex=t.target.body.x;
-    const ey=t.target.body.y;
-    const angle=Phaser.Math.Angle.Between(t.x,t.y,ex,ey);
-    const startX=t.x+Math.cos(angle)*14;
-    const startY=t.y+Math.sin(angle)*14;
+    const ex = t.target.x;
+    const ey = t.target.y;
+    const angle = Phaser.Math.Angle.Between(t.x, t.y, ex, ey);
+    const startX = t.x + Math.cos(angle) * 14;
+    const startY = t.y + Math.sin(angle) * 14;
 
-    t.beam=scene.add.line(0,0,startX,startY,ex,ey,color)
+    t.beam = scene.add.line(0, 0, startX, startY, ex, ey, color)
       .setLineWidth(width)
       .setAlpha(0.95);
 
-    // PURE TIME-BASED DAMAGE (NO RESETS)
-    if(now - t.lastTick >= t.rate){
+    // --- PURE TIME DAMAGE ---
+    if (now - t.lastTick >= t.rate) {
       t.lastTick = now;
-      hitEnemy(t.target,t.dmg);
+      hitEnemy(t.target, t.dmg);
     }
   });
 }
