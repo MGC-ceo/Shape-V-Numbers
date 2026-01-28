@@ -36,229 +36,209 @@ let enemies = [], towers = [];
 let wave=1, crystalHP=20, money=100, selectedShape="circle";
 let moneyText, waveText, hpText, shapeText, previewRing;
 
+// ---------------- SCENE ----------------
+
 function preload(){}
 
 function create(){
- drawPath(this);
+  drawPath(this);
 
- hpText=this.add.text(650,340,"Crystal: 20",{color:"#fff"});
- waveText=this.add.text(10,10,"Wave: 1",{color:"#fff"});
- moneyText=this.add.text(10,40,"Money: 100",{color:"#fff"});
- shapeText=this.add.text(10,70,"Selected: CIRCLE",{color:"#fff"});
+  hpText=this.add.text(650,340,"Crystal: 20",{color:"#fff"});
+  waveText=this.add.text(10,10,"Wave: 1",{color:"#fff"});
+  moneyText=this.add.text(10,40,"Money: 100",{color:"#fff"});
+  shapeText=this.add.text(10,70,"Selected: CIRCLE",{color:"#fff"});
 
- previewRing=this.add.circle(0,0,SHAPES[selectedShape].range,0xffffff,0.05)
-  .setStrokeStyle(1,0xffffff,0.3).setVisible(false);
+  previewRing=this.add.circle(0,0,SHAPES[selectedShape].range,0xffffff,0.05)
+    .setStrokeStyle(1,0xffffff,0.3).setVisible(false);
 
- this.input.on("pointermove",p=>previewRing.setVisible(true).setPosition(p.x,p.y));
- this.input.on("pointerdown",p=>placeTowerIfValid(this,p.x,p.y));
+  this.input.on("pointermove",p=>previewRing.setVisible(true).setPosition(p.x,p.y));
+  this.input.on("pointerdown",p=>placeTowerIfValid(this,p.x,p.y));
 
- this.input.keyboard.on("keydown-ONE",()=>selectShape("circle"));
- this.input.keyboard.on("keydown-TWO",()=>selectShape("square"));
- this.input.keyboard.on("keydown-THREE",()=>selectShape("triangle"));
+  this.input.keyboard.on("keydown-ONE",()=>selectShape("circle"));
+  this.input.keyboard.on("keydown-TWO",()=>selectShape("square"));
+  this.input.keyboard.on("keydown-THREE",()=>selectShape("triangle"));
 
- spawnWave(this);
+  spawnWave(this);
 
- this.time.addEvent({
-   delay:8000,
-   loop:true,
-   callback:()=>{
-     wave++; waveText.setText("Wave: "+wave);
-     spawnWave(this);
-   }
- });
+  this.time.addEvent({
+    delay:8000,
+    loop:true,
+    callback:()=>{
+      wave++;
+      waveText.setText("Wave: "+wave);
+      spawnWave(this);
+    }
+  });
 }
 
 function update(){
- if(paused) return;
- moveEnemies();
- updateLasers(this);
+  if(paused) return;
 
-// Safe cleanup AFTER rendering cycle
-enemies = enemies.filter(e => {
- if(!e.alive){
-   e.body.destroy();
-   e.text.destroy();
-   return false;
- }
- return true;
-});
+  moveEnemies();
+  updateLasers(this);
+
+  // SAFE CLEANUP
+  enemies = enemies.filter(e=>{
+    if(!e.alive){
+      e.body.destroy();
+      e.text.destroy();
+      return false;
+    }
+    return true;
+  });
 }
 
 // ---------------- PATH ----------------
 
 function drawPath(scene){
- const g=scene.add.graphics();
- g.lineStyle(20,0x444444,1);
- g.beginPath(); g.moveTo(path[0].x,path[0].y);
- for(let i=1;i<path.length;i++) g.lineTo(path[i].x,path[i].y);
- g.strokePath();
- path.forEach(p=>scene.add.circle(p.x,p.y,6,0x888888));
+  const g=scene.add.graphics();
+  g.lineStyle(20,0x444444,1);
+  g.beginPath();
+  g.moveTo(path[0].x,path[0].y);
+  for(let i=1;i<path.length;i++) g.lineTo(path[i].x,path[i].y);
+  g.strokePath();
+  path.forEach(p=>scene.add.circle(p.x,p.y,6,0x888888));
 }
 
 // ---------------- ENEMIES ----------------
 
 function spawnWave(scene){
- for(let i=0;i<wave+2;i++) spawnEnemy(scene);
+  for(let i=0;i<wave+2;i++) spawnEnemy(scene);
 }
 
 function spawnEnemy(scene){
- const type=Phaser.Utils.Array.GetRandom(ENEMY_TYPES);
- const e={hp:type.hp+wave,speed:type.speed,index:0,x:path[0].x,y:path[0].y,alive:true};
- e.body=scene.add.circle(e.x,e.y,16,type.color);
- e.text=scene.add.text(e.x-6,e.y-8,e.hp,{color:"#fff"});
- enemies.push(e);
+  const type=Phaser.Utils.Array.GetRandom(ENEMY_TYPES);
+  const e={hp:type.hp+wave,speed:type.speed,index:0,x:path[0].x,y:path[0].y,alive:true};
+  e.body=scene.add.circle(e.x,e.y,16,type.color);
+  e.text=scene.add.text(e.x-6,e.y-8,e.hp,{color:"#fff"});
+  enemies.push(e);
 }
 
 function moveEnemies(){
- enemies.forEach((e,i)=>{
-  if(!e.alive) return;
+  enemies.forEach((e,i)=>{
+    if(!e.alive) return;
 
-  const next=path[e.index+1];
-  if(!next){damageCrystal(i);return;}
-  const dx=next.x-e.x,dy=next.y-e.y,d=Math.hypot(dx,dy);
-  e.x+=(dx/d)*e.speed; e.y+=(dy/d)*e.speed;
-  e.body.setPosition(e.x,e.y);
-  e.text.setPosition(e.x-6,e.y-8);
-  if(d<4)e.index++;
- });
+    const next=path[e.index+1];
+    if(!next){ damageCrystal(i); return; }
+
+    const dx=next.x-e.x,dy=next.y-e.y,d=Math.hypot(dx,dy);
+    e.x+=(dx/d)*e.speed;
+    e.y+=(dy/d)*e.speed;
+    e.body.setPosition(e.x,e.y);
+    e.text.setPosition(e.x-6,e.y-8);
+
+    if(d<4) e.index++;
+  });
 }
 
 // ---------------- TOWERS ----------------
 
 function selectShape(type){
- selectedShape=type;
- shapeText.setText("Selected: "+type.toUpperCase());
- previewRing.setRadius(SHAPES[type].range);
+  selectedShape=type;
+  shapeText.setText("Selected: "+type.toUpperCase());
+  previewRing.setRadius(SHAPES[type].range);
 }
 
 function placeTower(scene,x,y,type){
- const s=SHAPES[type];
- const t={
-  x,y,
-  dmg:s.dmg,
-  rate:s.rate,
-  lastTick:0,
-  range:s.range,
-  beam:null,
-  target:null
- };
- t.body=scene.add.circle(x,y,14,s.color);
- towers.push(t);
+  const s=SHAPES[type];
+  const t={x,y,dmg:s.dmg,rate:s.rate,lastTick:0,range:s.range,beam:null,target:null};
+  t.body=scene.add.circle(x,y,14,s.color);
+  towers.push(t);
 }
 
 function placeTowerIfValid(scene,x,y){
- const cost=SHAPES[selectedShape].cost;
- if(money<cost)return;
- for(let p of path)if(Phaser.Math.Distance.Between(x,y,p.x,p.y)<40)return;
- money-=cost; moneyText.setText("Money: "+money);
- placeTower(scene,x,y,selectedShape);
+  const cost=SHAPES[selectedShape].cost;
+  if(money<cost) return;
+
+  for(let p of path){
+    if(Phaser.Math.Distance.Between(x,y,p.x,p.y)<40) return;
+  }
+
+  money-=cost;
+  moneyText.setText("Money: "+money);
+  placeTower(scene,x,y,selectedShape);
 }
 
-// ---------------- CONTINUOUS LASERS ----------------
+// ---------------- LASERS ----------------
 
 function updateLasers(scene){
- const now = scene.time.now;
+  const now=scene.time.now;
 
- towers.forEach(t=>{
-
-  if(t.target && !t.target.alive){
-    t.target = null;
-  }
-
-  if(t.target){
-    const dist = Phaser.Math.Distance.Between(t.x,t.y,t.target.x,t.target.y);
-    if(dist > t.range){
-      t.target = null;
-    }
-  }
-
-  if(!t.target){
-    t.target = enemies.find(e =>
-      e.alive && Phaser.Math.Distance.Between(t.x,t.y,e.x,e.y) <= t.range
-    );
+  towers.forEach(t=>{
+    if(t.target && !t.target.alive) t.target=null;
 
     if(t.target){
-      t.lastTick = 0;
+      const dist=Phaser.Math.Distance.Between(t.x,t.y,t.target.x,t.target.y);
+      if(dist>t.range) t.target=null;
     }
-  }
 
-  if(!t.target){
-    if(t.beam){ t.beam.destroy(); t.beam = null; }
-    return;
-  }
-
-  let color = 0x00ffcc;
-  let width = 3;
-  if(t.dmg >= 5){ color = 0xffaa00; width = 5; }
-  else if(t.dmg <= 1){ color = 0xaa66ff; width = 2; }
-
-  if(t.beam) t.beam.destroy();
-
-  const ex = t.target.body.x;
-  const ey = t.target.body.y;
-
-  const angle = Phaser.Math.Angle.Between(t.x, t.y, ex, ey);
-  const startX = t.x + Math.cos(angle) * 14;
-  const startY = t.y + Math.sin(angle) * 14;
-
-  t.beam = scene.add.line(0,0,startX,startY,ex,ey,color)
-    .setLineWidth(width)
-    .setAlpha(0.95);
-
-  // DAMAGE TICK
-  if(now - t.lastTick >= t.rate){
-    t.lastTick = now;
-    hitEnemy(t.target, t.dmg);
-
-    // Flash feedback ONLY if still alive
-    if(t.target.alive){
-      scene.tweens.add({
-        targets: t.target.body,
-        alpha: 0.6,
-        duration: 50,
-        yoyo: true
-      });
+    if(!t.target){
+      t.target=enemies.find(e=>e.alive && Phaser.Math.Distance.Between(t.x,t.y,e.x,e.y)<=t.range);
+      if(t.target) t.lastTick=0;
     }
-  }
 
- });
+    if(!t.target){
+      if(t.beam){ t.beam.destroy(); t.beam=null; }
+      return;
+    }
+
+    let color=0x00ffcc, width=3;
+    if(t.dmg>=5){ color=0xffaa00;width=5; }
+    else if(t.dmg<=1){ color=0xaa66ff;width=2; }
+
+    if(t.beam) t.beam.destroy();
+
+    const ex=t.target.body.x;
+    const ey=t.target.body.y;
+    const angle=Phaser.Math.Angle.Between(t.x,t.y,ex,ey);
+    const startX=t.x+Math.cos(angle)*14;
+    const startY=t.y+Math.sin(angle)*14;
+
+    t.beam=scene.add.line(0,0,startX,startY,ex,ey,color).setLineWidth(width).setAlpha(0.95);
+
+    if(now-t.lastTick>=t.rate){
+      t.lastTick=now;
+      hitEnemy(t.target,t.dmg);
+
+      if(t.target.alive){
+        scene.tweens.add({targets:t.target.body,alpha:0.6,duration:50,yoyo:true});
+      }
+    }
+  });
 }
 
 // ---------------- DAMAGE ----------------
 
 function hitEnemy(e,dmg){
- if(!e.alive) return;
+  if(!e.alive) return;
 
- e.hp -= dmg;
- e.text.setText(e.hp);
+  e.hp-=dmg;
+  e.text.setText(e.hp);
 
- if(e.hp <= 0){
-  e.alive = false;
-
-  // Hide instead of destroy (prevents render bugs)
-  e.body.setVisible(false);
-  e.text.setVisible(false);
-
-  money += 10;
-  moneyText.setText("Money: " + money);
- }
+  if(e.hp<=0){
+    e.alive=false;
+    e.body.setVisible(false);
+    e.text.setVisible(false);
+    money+=10;
+    moneyText.setText("Money: "+money);
+  }
 }
 
 function damageCrystal(i){
- const e = enemies[i];
- if(!e || !e.alive) return;
+  const e=enemies[i];
+  if(!e||!e.alive) return;
 
- e.alive = false;
- e.body.setVisible(false);
- e.text.setVisible(false);
+  e.alive=false;
+  e.body.setVisible(false);
+  e.text.setVisible(false);
 
- crystalHP--;
- hpText.setText("Crystal: " + crystalHP);
+  crystalHP--;
+  hpText.setText("Crystal: "+crystalHP);
 
- if(crystalHP <= 0) gameOver();
+  if(crystalHP<=0) gameOver();
 }
 
 function gameOver(){
- alert("Game Over! Wave "+wave);
- location.reload();
+  alert("Game Over! Wave "+wave);
+  location.reload();
 }
