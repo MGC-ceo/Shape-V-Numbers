@@ -36,8 +36,6 @@ let enemies = [], towers = [];
 let wave=1, crystalHP=20, money=100, selectedShape="circle";
 let moneyText, waveText, hpText, shapeText, previewRing;
 
-// ---------------- SCENE ----------------
-
 function preload(){}
 
 function create(){
@@ -73,11 +71,9 @@ function create(){
 
 function update(){
   if(paused) return;
-
   moveEnemies();
   updateLasers(this);
 
-  // Safe cleanup
   enemies = enemies.filter(e=>{
     if(!e.alive){
       e.body.destroy();
@@ -108,9 +104,9 @@ function spawnWave(scene){
 
 function spawnEnemy(scene){
   const type=Phaser.Utils.Array.GetRandom(ENEMY_TYPES);
-  const e={hp:type.hp+wave,speed:type.speed,index:0,alive:true};
-  e.body=scene.add.circle(path[0].x,path[0].y,16,type.color);
-  e.text=scene.add.text(e.body.x-6,e.body.y-8,e.hp,{color:"#fff"});
+  const e={hp:type.hp+wave,speed:type.speed,index:0,x:path[0].x,y:path[0].y,alive:true};
+  e.body=scene.add.circle(e.x,e.y,16,type.color);
+  e.text=scene.add.text(e.x-6,e.y-8,e.hp,{color:"#fff"});
   enemies.push(e);
 }
 
@@ -121,13 +117,11 @@ function moveEnemies(){
     const next=path[e.index+1];
     if(!next){ damageCrystal(i); return; }
 
-    const dx=next.x-e.body.x;
-    const dy=next.y-e.body.y;
-    const d=Math.hypot(dx,dy);
-
-    e.body.x += (dx/d)*e.speed;
-    e.body.y += (dy/d)*e.speed;
-    e.text.setPosition(e.body.x-6,e.body.y-8);
+    const dx=next.x-e.x,dy=next.y-e.y,d=Math.hypot(dx,dy);
+    e.x+=(dx/d)*e.speed;
+    e.y+=(dy/d)*e.speed;
+    e.body.setPosition(e.x,e.y);
+    e.text.setPosition(e.x-6,e.y-8);
 
     if(d<4) e.index++;
   });
@@ -143,7 +137,15 @@ function selectShape(type){
 
 function placeTower(scene,x,y,type){
   const s=SHAPES[type];
-  const t={x,y,dmg:s.dmg,rate:s.rate,lastTick:0,range:s.range,beam:null,target:null};
+  const t={
+    x,y,
+    dmg:s.dmg,
+    rate:s.rate,
+    lastTick:0,
+    range:s.range,
+    beam:null,
+    target:null
+  };
   t.body=scene.add.circle(x,y,14,s.color);
   towers.push(t);
 }
@@ -161,23 +163,29 @@ function placeTowerIfValid(scene,x,y){
   placeTower(scene,x,y,selectedShape);
 }
 
-// ---------------- LASERS ----------------
+// ---------------- LASERS (FIXED TARGET LOCK) ----------------
 
 function updateLasers(scene){
   const now=scene.time.now;
 
   towers.forEach(t=>{
 
-    if(t.target && !t.target.alive) t.target=null;
-
-    if(t.target){
-      const dist=Phaser.Math.Distance.Between(t.x,t.y,t.target.body.x,t.target.body.y);
-      if(dist>t.range) t.target=null;
+    // Keep current target if valid
+    if(t.target && t.target.alive){
+      const d=Phaser.Math.Distance.Between(t.x,t.y,t.target.x,t.target.y);
+      if(d>t.range) t.target=null;
+    } else {
+      t.target=null;
     }
 
+    // Acquire only if no target
     if(!t.target){
-      t.target=enemies.find(e=>e.alive && Phaser.Math.Distance.Between(t.x,t.y,e.body.x,e.body.y)<=t.range);
-      if(t.target) t.lastTick=0;
+      for(let e of enemies){
+        if(e.alive && Phaser.Math.Distance.Between(t.x,t.y,e.x,e.y)<=t.range){
+          t.target=e;
+          break;
+        }
+      }
     }
 
     if(!t.target){
@@ -201,13 +209,10 @@ function updateLasers(scene){
       .setLineWidth(width)
       .setAlpha(0.95);
 
+    // 🔥 DAMAGE TICK — NO RESET BUG
     if(now-t.lastTick>=t.rate){
       t.lastTick=now;
       hitEnemy(t.target,t.dmg);
-
-      if(t.target.alive){
-        scene.tweens.add({targets:t.target.body,alpha:0.6,duration:50,yoyo:true});
-      }
     }
   });
 }
