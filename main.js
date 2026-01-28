@@ -65,7 +65,6 @@ function update(){
  if(paused) return;
  moveEnemies();
  towerShooting(this);
- moveBullets();
 }
 
 // PATH
@@ -137,25 +136,10 @@ function towerShooting(scene){
 
 // BULLETS (PHYSICS)
 function shoot(scene,t,target){
- const b=scene.physics.add.circle(t.x,t.y,6,0xffffff);
- b.dmg=t.dmg;
- b.target=target;
- bullets.push(b);
-}
+  hitEnemy(target,t.dmg);
 
-function moveBullets(){
- bullets.forEach((b,i)=>{
-  if(!b.target||!enemies.includes(b.target)){b.destroy();bullets.splice(i,1);return;}
-  const dx=b.target.x-b.x,dy=b.target.y-b.y;
-  const angle=Math.atan2(dy,dx);
-  b.setVelocity(Math.cos(angle)*200,Math.sin(angle)*200);
-
-  if(Phaser.Math.Distance.Between(b.x,b.y,b.target.x,b.target.y)<22){
-    hitEnemy(b.target,b.dmg);
-    b.destroy();
-    bullets.splice(i,1);
-  }
- });
+  const line=scene.add.line(0,0,t.x,t.y,target.x,target.y,0xffffff).setLineWidth(2);
+  scene.time.delayedCall(60,()=>line.destroy());
 }
 
 // DAMAGE
