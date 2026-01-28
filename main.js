@@ -112,13 +112,39 @@ function placeTowerIfValid(scene,x,y){
 
 function towerShooting(scene){
  towers.forEach(t=>{
-  const now=Date.now();
-  if(now-t.last<t.rate)return;
-  const target=enemies.find(e=>Phaser.Math.Distance.Between(t.x,t.y,e.x,e.y)<=t.range);
-  if(!target)return;
-  t.last=now;
-  shoot(scene,t,target);
+  const now = Date.now();
+
+  // If no target or target died/out of range → find new one
+  if(!t.target || !enemies.includes(t.target) ||
+     Phaser.Math.Distance.Between(t.x,t.y,t.target.x,t.target.y) > t.range){
+      t.target = enemies.find(e =>
+        Phaser.Math.Distance.Between(t.x,t.y,e.x,e.y) <= t.range
+      );
+  }
+
+  if(!t.target) return;
+
+  // Fire based on attack rate
+  if(now - t.last >= t.rate){
+    t.last = now;
+    applyLaserDamage(scene, t, t.target);
+  }
  });
+}
+
+function applyLaserDamage(scene, tower, enemy){
+  hitEnemy(enemy, tower.dmg);
+
+  // Draw thicker beam depending on tower type
+  let width = 2;
+  if(tower.dmg >= 5) width = 4;     // square = heavy beam
+  if(tower.dmg <= 1) width = 1;     // triangle = thin rapid beam
+
+  const beam = scene.add.line(0,0,tower.x,tower.y,enemy.x,enemy.y,0xffffff)
+    .setLineWidth(width)
+    .setAlpha(0.9);
+
+  scene.time.delayedCall(80, ()=> beam.destroy());
 }
 
 // LASER SHOT (NO MISS POSSIBLE)
