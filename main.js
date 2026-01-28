@@ -187,25 +187,30 @@ function updateLasers(scene){
 
   if(t.beam) t.beam.destroy();
 
- // Use rendered body position to prevent visual lag
-const ex = t.target.body.x;
-const ey = t.target.body.y;
+  // LOCK TO RENDERED POSITION
+  const ex = t.target.body.x;
+  const ey = t.target.body.y;
 
-const angle = Phaser.Math.Angle.Between(t.x, t.y, ex, ey);
-const startX = t.x + Math.cos(angle) * 14;
-const startY = t.y + Math.sin(angle) * 14;
+  const angle = Phaser.Math.Angle.Between(t.x, t.y, ex, ey);
+  const startX = t.x + Math.cos(angle) * 14;
+  const startY = t.y + Math.sin(angle) * 14;
 
-t.beam = scene.add.line(0,0,startX,startY,ex,ey,color)
+  t.beam = scene.add.line(0,0,startX,startY,ex,ey,color)
     .setLineWidth(width)
     .setAlpha(0.95);
 
-  // ✨ VISUAL FEEDBACK EVERY FRAME (makes hits feel real)
-  t.target.body.setScale(0.95 + Math.sin(now * 0.02) * 0.03);
-
-  // REAL DAMAGE TICK
+  // DAMAGE TICK ONLY (no scale distortion)
   if(now - t.lastTick >= t.rate){
     t.lastTick = now;
     hitEnemy(t.target, t.dmg);
+
+    // small flash effect instead of scale wobble
+    scene.tweens.add({
+      targets: t.target.body,
+      alpha: 0.6,
+      duration: 50,
+      yoyo: true
+    });
   }
  });
 }
@@ -217,7 +222,6 @@ function hitEnemy(e,dmg){
 
  e.hp-=dmg;
  e.text.setText(e.hp);
- e.body.setScale(e.body.scaleX*0.95);
 
  if(e.hp<=0){
   e.alive=false;
