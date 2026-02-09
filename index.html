@@ -11,18 +11,31 @@
   <script src="main.js" defer></script>
 
   <style>
-    body {
-      margin: 0;
-      background: #111;
-      overflow: hidden;
-      font-family: monospace;
-    }
+  body {
+    margin: 0;
+    background: #111;
+    font-family: monospace;
+    text-align: center;
+  }
 
-    canvas {
-      display: block;
-      margin: 0 auto;
-    }
-  </style>
+  .ad-container {
+    margin: 12px 0;
+    min-height: 90px; /* space for ads */
+  }
+
+  #game-container {
+    min-height: 70vh;   /* IMPORTANT: not 100vh */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  canvas {
+    display: block;
+    margin: 0 auto;
+  }
+</style>
+
 </head>
 <body>
 
