@@ -60,17 +60,17 @@ MenuScene.prototype.create = function(){
 
   this.cameras.main.fadeIn(600);
 
-  /* ===== FIXED PARTICLES FOR PHASER 3.90 ===== */
+ // Background particles (Phaser 3.90 compatible)
 
-  const particles = this.add.particles(0,0,null,{
-    x: { min: 0, max: 800 },
-    y: 600,
-    lifespan: 6000,
-    speedY: { min: -20, max: -50 },
-    scale: { start: 0.4, end: 0 },
-    quantity: 2,
-    blendMode: 'ADD'
-  });
+const particles = this.add.particles(0, 0, null, {
+  x: { min: 0, max: this.cameras.main.width },
+  y: this.cameras.main.height,
+  lifespan: 6000,
+  speedY: { min: -20, max: -50 },
+  scale: { start: 0.4, end: 0 },
+  quantity: 2,
+  blendMode: 'ADD'
+});
 
   /* ===== UI PANEL ===== */
 
