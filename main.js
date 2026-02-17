@@ -26,14 +26,6 @@ function loadProgress(){
 
 let playerLevel = loadProgress();
 
-/* ================= SAFE SOUND SYSTEM ================= */
-
-function safePlay(scene,key,config){
-  if(scene.sound.get(key)){
-    scene.sound.play(key,config);
-  }
-}
-
 /* ================= MENU SCENE ================= */
 
 function MenuScene(){ Phaser.Scene.call(this,{key:"MenuScene"}); }
@@ -47,14 +39,16 @@ MenuScene.prototype.create = function(){
   this.add.text(400,130,"LEVEL: "+playerLevel,{fontSize:"20px",color:"#00ffcc"}).setOrigin(0.5);
 
   const playBtn = this.add.text(400,250,"PLAY",{fontSize:"36px",color:"#ffffff"})
-  .setOrigin(0.5).setInteractive();
+    .setOrigin(0.5)
+    .setInteractive();
 
   playBtn.on("pointerdown", ()=>{
     this.scene.start("SoloScene");
   });
 
   const partyBtn = this.add.text(400,380,"PARTY",{fontSize:"28px",color:"#ffffff"})
-  .setOrigin(0.5).setInteractive();
+    .setOrigin(0.5)
+    .setInteractive();
 
   partyBtn.on("pointerdown", ()=>{
     this.scene.start("PartyScene");
@@ -70,8 +64,19 @@ PartyScene.prototype.create = function(){
 
   this.add.text(400,80,"SHAPE STATS",{fontSize:"36px",color:"#ffffff"}).setOrigin(0.5);
 
+  const stats = [
+    "CIRCLE\nDamage: Medium\nRange: Medium\nAttack Speed: Normal",
+    "SQUARE\nDamage: High\nRange: Large\nAttack Speed: Slow",
+    "TRIANGLE\nDamage: Medium\nRange: Short\nAttack Speed: Fast"
+  ];
+
+  stats.forEach((s,i)=>{
+    this.add.text(400,180+i*120,s,{fontSize:"18px",color:"#00ffcc",align:"center"}).setOrigin(0.5);
+  });
+
   const backBtn = this.add.text(400,540,"BACK",{fontSize:"24px",color:"#ffffff"})
-  .setOrigin(0.5).setInteractive();
+    .setOrigin(0.5)
+    .setInteractive();
 
   backBtn.on("pointerdown", ()=>{
     this.scene.start("MenuScene");
@@ -92,7 +97,11 @@ const SHAPES = {
 };
 
 const path = [
-  {x:0,y:300},{x:200,y:300},{x:400,y:200},{x:600,y:300},{x:800,y:300}
+  {x:0,y:300},
+  {x:200,y:300},
+  {x:400,y:200},
+  {x:600,y:300},
+  {x:800,y:300}
 ];
 
 let enemies, towers, wave, money, crystalHP, selectedTower;
@@ -108,7 +117,6 @@ SoloScene.prototype.create = function(){
   selectedTower = "circle";
 
   drawPath(this);
-
   laserGraphics = this.add.graphics();
 
   moneyText = this.add.text(10,10,"Money: "+money,{color:"#fff"});
@@ -129,7 +137,7 @@ SoloScene.prototype.create = function(){
 
 SoloScene.prototype.update = function(time){
   moveEnemies(this);
-  updateTowerDamage(this,time);
+  updateTowerDamage(time);
   drawLasers();
 };
 
@@ -169,29 +177,58 @@ function moveEnemies(scene){
 
     const dx=next.x-e.x, dy=next.y-e.y;
     const d=Math.hypot(dx,dy);
+
     e.x += (dx/d)*e.speed;
     e.y += (dy/d)*e.speed;
+
     e.body.setPosition(e.x,e.y);
     e.text.setPosition(e.x-10,e.y-12);
+
     if(d<4) e.pathIndex++;
   });
 }
 
 function tryPlaceTower(scene,x,y){
   if(towers.length >= MAX_TOWERS) return;
+
   const tData = SHAPES[selectedTower];
   if(money < tData.cost) return;
 
   money -= tData.cost;
   moneyText.setText("Money: "+money);
+
   addTower(scene,x,y,selectedTower);
   towerCountText.setText("Towers: "+towers.length+" / "+MAX_TOWERS);
 }
 
 function addTower(scene,x,y,type){
   const s = SHAPES[type];
-  towers.push({x,y,range:s.range,dmg:s.dmg,rate:s.rate,nextTick:0,type});
-  scene.add.circle(x,y,14,s.color).setStrokeStyle(2,0xffffff);
+
+  towers.push({
+    x,
+    y,
+    range: s.range,
+    dmg: s.dmg,
+    rate: s.rate,
+    nextTick: 0,
+    type
+  });
+
+  if(type === "circle"){
+    scene.add.circle(x, y, 14, s.color).setStrokeStyle(2, 0xffffff);
+  }
+
+  if(type === "square"){
+    scene.add.rectangle(x, y, 28, 28, s.color).setStrokeStyle(2, 0xffffff);
+  }
+
+  if(type === "triangle"){
+    scene.add.polygon(x, y, [
+      0,-16,
+      -14,12,
+      14,12
+    ], s.color).setStrokeStyle(2, 0xffffff);
+  }
 }
 
 function changeSelection(type){
@@ -199,16 +236,18 @@ function changeSelection(type){
   selectText.setText("Selected: "+type.toUpperCase());
 }
 
-function updateTowerDamage(scene,time){
+function updateTowerDamage(time){
   towers.forEach(t=>{
     if(time < t.nextTick) return;
+
     t.nextTick = time + t.rate;
+    const rangeSq = t.range*t.range;
 
     enemies.forEach(e=>{
       if(!e.alive) return;
       const dx=e.x-t.x, dy=e.y-t.y;
-      if(dx*dx+dy*dy<=t.range*t.range){
-        damageEnemy(scene,e,t.dmg);
+      if(dx*dx+dy*dy<=rangeSq){
+        damageEnemy(e,t.dmg);
       }
     });
   });
@@ -218,7 +257,7 @@ function drawLasers(){
   laserGraphics.clear();
 }
 
-function damageEnemy(scene,e,dmg){
+function damageEnemy(e,dmg){
   e.hp-=dmg;
   e.text.setText(Math.floor(e.hp));
 
