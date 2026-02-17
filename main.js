@@ -26,9 +26,14 @@ function loadProgress(){
 
 let playerLevel = loadProgress();
 
-/* ================= SOUND ENGINE ================= */
+/* ================= GLOBAL AUDIO ================= */
 
-function tone(scene, freq = 440, duration = 100, volume = 0.2){
+let masterVolume = 0.3;
+let isMuted = false;
+
+function tone(scene, freq = 440, duration = 150, volume = 0.2, type="sine"){
+  if(isMuted) return;
+
   const ctx = scene.sound.context;
   if(!ctx) return;
 
@@ -38,55 +43,59 @@ function tone(scene, freq = 440, duration = 100, volume = 0.2){
   osc.connect(gain);
   gain.connect(ctx.destination);
 
+  osc.type = type;
   osc.frequency.value = freq;
-  osc.type = "sine";
 
-  gain.gain.setValueAtTime(volume, ctx.currentTime);
+  gain.gain.setValueAtTime(volume * masterVolume, ctx.currentTime);
   gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration/1000);
 
   osc.start();
   osc.stop(ctx.currentTime + duration/1000);
 }
 
-/* ========== BACKGROUND MUSIC LOOPS ========== */
+/* ================= MUSIC SYSTEM ================= */
 
-let menuMusicLoop = null;
-let gameMusicLoop = null;
+let musicEvents = [];
 
-function stopMenuMusic(){
-  if(menuMusicLoop){
-    menuMusicLoop.remove();
-    menuMusicLoop = null;
-  }
-}
-
-function stopGameMusic(){
-  if(gameMusicLoop){
-    gameMusicLoop.remove();
-    gameMusicLoop = null;
-  }
+function stopMusic(){
+  musicEvents.forEach(e=>e.remove());
+  musicEvents = [];
 }
 
 function startMenuMusic(scene){
-  stopGameMusic();
-  stopMenuMusic();
+  stopMusic();
 
-  menuMusicLoop = scene.time.addEvent({
-    delay: 900,
+  // Bass pulse
+  musicEvents.push(scene.time.addEvent({
+    delay: 800,
     loop: true,
-    callback: () => tone(scene, 220, 400, 0.05)
-  });
+    callback: ()=> tone(scene, 180, 400, 0.08, "triangle")
+  }));
+
+  // Light ambient melody
+  musicEvents.push(scene.time.addEvent({
+    delay: 1600,
+    loop: true,
+    callback: ()=> tone(scene, 440, 300, 0.05, "sine")
+  }));
 }
 
 function startGameMusic(scene){
-  stopMenuMusic();
-  stopGameMusic();
+  stopMusic();
 
-  gameMusicLoop = scene.time.addEvent({
-    delay: 700,
+  // Low driving bass
+  musicEvents.push(scene.time.addEvent({
+    delay: 600,
     loop: true,
-    callback: () => tone(scene, 140, 300, 0.05)
-  });
+    callback: ()=> tone(scene, 120, 300, 0.09, "square")
+  }));
+
+  // Mid layer rhythm
+  musicEvents.push(scene.time.addEvent({
+    delay: 900,
+    loop: true,
+    callback: ()=> tone(scene, 260, 200, 0.05, "triangle")
+  }));
 }
 
 /* ================= MENU SCENE ================= */
@@ -96,50 +105,56 @@ MenuScene.prototype = Object.create(Phaser.Scene.prototype);
 
 MenuScene.prototype.create = function(){
 
-  const centerX = this.cameras.main.width/2;
-  const centerY = this.cameras.main.height/2;
+  const w = this.cameras.main.width;
+  const h = this.cameras.main.height;
+  const centerX = w/2;
+  const centerY = h/2;
 
   this.cameras.main.fadeIn(600);
-
   startMenuMusic(this);
 
-  const panel = this.add.rectangle(centerX,centerY,500,450,0x000000,0.4)
-    .setStrokeStyle(2,0x00ffcc);
+  /* ===== PARTICLES BACKGROUND ===== */
+  const particles = this.add.particles(0xffffff);
+  particles.createEmitter({
+    x: {min:0,max:w},
+    y: h,
+    lifespan: 6000,
+    speedY: {min:-20,max:-50},
+    scale: {start:0.4,end:0},
+    quantity: 2,
+    blendMode: 'ADD'
+  });
+
+  /* ===== PANEL ===== */
+  this.add.rectangle(centerX,centerY,500,450,0x000000,0.4)
+      .setStrokeStyle(2,0x00ffcc);
 
   const container = this.add.container(centerX, centerY);
 
   const title = this.add.text(0,-150,"SHAPE DEFENSE",{fontSize:"42px",color:"#ffffff"}).setOrigin(0.5);
   const level = this.add.text(0,-100,"LEVEL: "+playerLevel,{fontSize:"20px",color:"#00ffcc"}).setOrigin(0.5);
 
-  const playBtn = this.add.text(0,0,"PLAY",{fontSize:"36px",color:"#ffffff"})
-    .setOrigin(0.5)
-    .setInteractive();
+  const playBtn = this.add.text(0,0,"PLAY",{fontSize:"36px",color:"#ffffff"}).setOrigin(0.5).setInteractive();
+  const partyBtn = this.add.text(0,100,"PARTY",{fontSize:"28px",color:"#ffffff"}).setOrigin(0.5).setInteractive();
 
-  const more = this.add.text(0,50,"More Content Soon",{fontSize:"16px",color:"#888"}).setOrigin(0.5);
-
-  const partyBtn = this.add.text(0,120,"PARTY",{fontSize:"28px",color:"#ffffff"})
-    .setOrigin(0.5)
-    .setInteractive();
-
-  container.add([title,level,playBtn,more,partyBtn]);
+  container.add([title,level,playBtn,partyBtn]);
 
   this.tweens.add({
     targets: container,
     y: centerY - 10,
     duration: 2000,
     yoyo:true,
-    repeat:-1,
-    ease:"Sine.easeInOut"
+    repeat:-1
   });
 
   playBtn.on("pointerdown", ()=>{
-    tone(this, 700, 120);
+    tone(this,700,120,0.4);
     this.cameras.main.fadeOut(400);
     this.time.delayedCall(400,()=>this.scene.start("SoloScene"));
   });
 
   partyBtn.on("pointerdown", ()=>{
-    tone(this, 500, 120);
+    tone(this,500,120,0.4);
     this.scene.start("PartyScene");
   });
 };
@@ -150,7 +165,6 @@ function PartyScene(){ Phaser.Scene.call(this,{key:"PartyScene"}); }
 PartyScene.prototype = Object.create(Phaser.Scene.prototype);
 
 PartyScene.prototype.create = function(){
-
   this.cameras.main.fadeIn(400);
 
   this.add.text(400,80,"SHAPE STATS",{fontSize:"36px",color:"#ffffff"}).setOrigin(0.5);
@@ -165,17 +179,11 @@ PartyScene.prototype.create = function(){
     this.add.text(400,180+i*120,s,{fontSize:"18px",color:"#00ffcc",align:"center"}).setOrigin(0.5);
   });
 
-  const backBtn = this.add.text(400,540,"BACK",{fontSize:"24px",color:"#ffffff"})
-    .setOrigin(0.5)
-    .setInteractive();
-
-  backBtn.on("pointerdown", ()=>{
-    tone(this, 400, 120);
-    this.scene.start("MenuScene");
-  });
+  const backBtn = this.add.text(400,540,"BACK",{fontSize:"24px",color:"#ffffff"}).setOrigin(0.5).setInteractive();
+  backBtn.on("pointerdown", ()=> this.scene.start("MenuScene"));
 };
 
-/* ================= SOLO GAME SCENE ================= */
+/* ================= SOLO GAME ================= */
 
 function SoloScene(){ Phaser.Scene.call(this,{key:"SoloScene"}); }
 SoloScene.prototype = Object.create(Phaser.Scene.prototype);
@@ -207,6 +215,16 @@ SoloScene.prototype.create = function(){
   crystalHP=20;
   selectedTower="circle";
 
+  /* Subtle gameplay particles */
+  const particles = this.add.particles(0x00ffcc);
+  particles.createEmitter({
+    x:400,y:300,
+    lifespan:2000,
+    scale:{start:0.2,end:0},
+    quantity:1,
+    blendMode:"ADD"
+  });
+
   drawPath(this);
   laserGraphics=this.add.graphics();
 
@@ -218,15 +236,15 @@ SoloScene.prototype.create = function(){
 
   this.input.on("pointerdown",p=>tryPlaceTower(this,p.x,p.y));
 
-  this.input.keyboard.on("keydown-ONE",()=>{ tone(this,600,80); changeSelection("circle"); });
-  this.input.keyboard.on("keydown-TWO",()=>{ tone(this,500,80); changeSelection("square"); });
-  this.input.keyboard.on("keydown-THREE",()=>{ tone(this,400,80); changeSelection("triangle"); });
+  this.input.keyboard.on("keydown-ONE",()=>{tone(this,600,80);changeSelection("circle");});
+  this.input.keyboard.on("keydown-TWO",()=>{tone(this,500,80);changeSelection("square");});
+  this.input.keyboard.on("keydown-THREE",()=>{tone(this,400,80);changeSelection("triangle");});
 
   spawnWave(this);
   this.time.addEvent({delay:7000,loop:true,callback:()=>spawnWave(this)});
 };
 
-SoloScene.prototype.update = function(time){
+SoloScene.prototype.update=function(time){
   moveEnemies(this);
   updateTowerDamage(this,time);
 };
@@ -234,7 +252,7 @@ SoloScene.prototype.update = function(time){
 /* ================= GAME LOGIC ================= */
 
 function spawnWave(scene){
-  tone(scene,300,200);
+  tone(scene,300,200,0.4);
 
   for(let i=0;i<5+wave;i++){
     const e={x:path[0].x,y:path[0].y,hp:12+wave*3,speed:0.8,pathIndex:0,alive:true};
@@ -310,7 +328,7 @@ function updateTowerDamage(scene,time){
         laserGraphics.lineTo(e.x,e.y);
         laserGraphics.strokePath();
 
-        tone(scene,800,50);
+        tone(scene,800,50,0.5);
         damageEnemy(e,t.dmg);
       }
     });
@@ -333,8 +351,8 @@ function damageCrystal(scene,amount){
   crystalHP-=amount;
   hpText.setText("Crystal HP: "+crystalHP);
   if(crystalHP<=0){
-    stopGameMusic();
-    tone(scene,120,400,0.4);
+    stopMusic();
+    tone(scene,120,400,0.5);
     scene.scene.start("MenuScene");
   }
 }
