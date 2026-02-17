@@ -1,16 +1,3 @@
-const config = {
-  type: Phaser.AUTO,
-  width: 800,
-  height: 600,
-  backgroundColor: "#111",
-  parent: "game-container",
-  scale: {
-    mode: Phaser.Scale.FIT,
-    autoCenter: Phaser.Scale.CENTER_BOTH
-  },
-  scene: [MenuScene, SoloScene, PartyScene]
-};
-
 /* ================= SAVE SYSTEM ================= */
 
 function saveProgress(level){
@@ -375,4 +362,19 @@ function drawPath(scene){
   for(let i=1;i<path.length;i++)g.lineTo(path[i].x,path[i].y);
   g.strokePath();
 }
+/* ================= GAME CONFIG ================= */
+
+const config = {
+  type: Phaser.AUTO,
+  width: 800,
+  height: 600,
+  backgroundColor: "#111",
+  parent: "game-container",
+  scale: {
+    mode: Phaser.Scale.FIT,
+    autoCenter: Phaser.Scale.CENTER_BOTH
+  },
+  scene: [MenuScene, SoloScene, PartyScene]
+};
+
 new Phaser.Game(config);
