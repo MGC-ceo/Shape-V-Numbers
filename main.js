@@ -24,33 +24,64 @@ function loadProgress(){
   return saved ? parseInt(saved) : 1;
 }
 
-let playerLevel = loadProgress(); // ONLY DECLARED ONCE
+let playerLevel = loadProgress();
+
+/* ================= SOUND LOADER ================= */
+
+function loadSounds(scene){
+  scene.load.audio("menuMusic","https://cdn.pixabay.com/download/audio/2022/03/15/audio_115b9e6e3c.mp3");
+  scene.load.audio("mapMusic","https://cdn.pixabay.com/download/audio/2022/11/17/audio_4c8b4b0b1c.mp3");
+  scene.load.audio("towerAttack","https://cdn.pixabay.com/download/audio/2022/03/10/audio_0c4b7b0f09.mp3");
+  scene.load.audio("click","https://cdn.pixabay.com/download/audio/2022/03/15/audio_4d6d3b3a4b.mp3");
+  scene.load.audio("roundStart","https://cdn.pixabay.com/download/audio/2022/03/15/audio_2c3c9a3b1a.mp3");
+  scene.load.audio("lose","https://cdn.pixabay.com/download/audio/2022/03/15/audio_8c4d1c9f1f.mp3");
+  scene.load.audio("bossKill","https://cdn.pixabay.com/download/audio/2022/03/15/audio_7c4d1c9f22.mp3");
+  scene.load.audio("bossTheme","https://cdn.pixabay.com/download/audio/2022/10/20/audio_8c3f7d4a33.mp3");
+}
 
 /* ================= MENU SCENE ================= */
 
 function MenuScene(){ Phaser.Scene.call(this,{key:"MenuScene"}); }
 MenuScene.prototype = Object.create(Phaser.Scene.prototype);
 
+MenuScene.prototype.preload = function(){
+  loadSounds(this);
+};
+
 MenuScene.prototype.create = function(){
 
   playerLevel = loadProgress();
+
+  this.menuMusic = this.sound.add("menuMusic",{loop:true,volume:0.5});
+  this.menuMusic.play();
 
   this.add.text(400,80,"SHAPE DEFENSE",{fontSize:"42px",color:"#ffffff"}).setOrigin(0.5);
   this.add.text(400,130,"LEVEL: "+playerLevel,{fontSize:"20px",color:"#00ffcc"}).setOrigin(0.5);
 
   const playBtn = this.add.text(400,250,"PLAY",{fontSize:"36px",color:"#ffffff"}).setOrigin(0.5).setInteractive();
-  playBtn.on("pointerdown", ()=>this.scene.start("SoloScene"));
+  playBtn.on("pointerdown", ()=>{
+    this.sound.play("click");
+    this.menuMusic.stop();
+    this.scene.start("SoloScene");
+  });
 
   this.add.text(400,300,"More Content Soon",{fontSize:"16px",color:"#888"}).setOrigin(0.5);
 
   const partyBtn = this.add.text(400,380,"PARTY",{fontSize:"28px",color:"#ffffff"}).setOrigin(0.5).setInteractive();
-  partyBtn.on("pointerdown", ()=>this.scene.start("PartyScene"));
+  partyBtn.on("pointerdown", ()=>{
+    this.sound.play("click");
+    this.scene.start("PartyScene");
+  });
 };
 
 /* ================= PARTY SCENE ================= */
 
 function PartyScene(){ Phaser.Scene.call(this,{key:"PartyScene"}); }
 PartyScene.prototype = Object.create(Phaser.Scene.prototype);
+
+PartyScene.prototype.preload = function(){
+  loadSounds(this);
+};
 
 PartyScene.prototype.create = function(){
 
@@ -67,7 +98,10 @@ PartyScene.prototype.create = function(){
   });
 
   const backBtn = this.add.text(400,540,"BACK",{fontSize:"24px",color:"#ffffff"}).setOrigin(0.5).setInteractive();
-  backBtn.on("pointerdown", ()=>this.scene.start("MenuScene"));
+  backBtn.on("pointerdown", ()=>{
+    this.sound.play("click");
+    this.scene.start("MenuScene");
+  });
 };
 
 /* ================= SOLO GAME SCENE ================= */
@@ -90,6 +124,10 @@ const path = [
 let enemies, towers, wave, money, crystalHP, selectedTower;
 let laserGraphics, moneyText, waveText, selectText, hpText, towerCountText;
 
+SoloScene.prototype.preload = function(){
+  loadSounds(this);
+};
+
 SoloScene.prototype.create = function(){
 
   enemies = [];
@@ -100,6 +138,11 @@ SoloScene.prototype.create = function(){
   selectedTower = "circle";
 
   drawPath(this);
+
+  this.mapMusic = this.sound.add("mapMusic",{loop:true,volume:0.4});
+  this.mapMusic.play();
+  this.sound.play("roundStart");
+
   laserGraphics = this.add.graphics();
 
   moneyText = this.add.text(10,10,"Money: "+money,{color:"#fff"});
@@ -109,10 +152,10 @@ SoloScene.prototype.create = function(){
   towerCountText = this.add.text(10,90,"Towers: 0 / "+MAX_TOWERS,{color:"#aaa"});
 
   this.input.on("pointerdown", p => tryPlaceTower(this, p.x, p.y));
-  this.input.keyboard.on("keydown-ONE", ()=>changeSelection("circle"));
-  this.input.keyboard.on("keydown-TWO", ()=>changeSelection("square"));
-  this.input.keyboard.on("keydown-THREE", ()=>changeSelection("triangle"));
-  this.input.keyboard.on("keydown-ESC", ()=>this.scene.start("MenuScene"));
+
+  this.input.keyboard.on("keydown-ONE", ()=>{ this.sound.play("click"); changeSelection("circle"); });
+  this.input.keyboard.on("keydown-TWO", ()=>{ this.sound.play("click"); changeSelection("square"); });
+  this.input.keyboard.on("keydown-THREE", ()=>{ this.sound.play("click"); changeSelection("triangle"); });
 
   spawnWave(this);
   this.time.addEvent({ delay:7000, loop:true, callback:()=>spawnWave(this) });
@@ -120,24 +163,31 @@ SoloScene.prototype.create = function(){
 
 SoloScene.prototype.update = function(time){
   moveEnemies(this);
-  updateTowerDamage(time);
+  updateTowerDamage(this,time);
   drawLasers();
 };
 
-/* ================= GAME LOGIC ================= */
+/* ================= CORE GAME LOGIC ================= */
 
 function spawnWave(scene){
   const isBossWave = wave % 5 === 0;
+
+  if(isBossWave){
+    scene.sound.play("bossTheme",{volume:0.6});
+  }
+
   for(let i=0;i<5+wave;i++){
     const hp = isBossWave ? 150 + wave*10 : 12 + wave*3;
     const size = isBossWave ? 22 : 14;
     const speed = isBossWave ? 0.5 : 0.8 + wave*0.05;
     const color = isBossWave ? 0xff0000 : 0xff5555;
+
     const e = { x:path[0].x, y:path[0].y, hp, speed, pathIndex:0, alive:true, boss:isBossWave };
     e.body = scene.add.circle(e.x,e.y,size,color);
     e.text = scene.add.text(e.x-10,e.y-12,e.hp,{color:"#fff"});
     enemies.push(e);
   }
+
   wave++;
   waveText.setText("Wave: "+wave);
 }
@@ -145,6 +195,7 @@ function spawnWave(scene){
 function moveEnemies(scene){
   enemies.forEach(e=>{
     if(!e.alive) return;
+
     const next = path[e.pathIndex+1];
     if(!next){
       damageCrystal(scene,e.boss?5:1);
@@ -153,6 +204,7 @@ function moveEnemies(scene){
       e.text.destroy();
       return;
     }
+
     const dx=next.x-e.x, dy=next.y-e.y;
     const d=Math.hypot(dx,dy);
     e.x += (dx/d)*e.speed;
@@ -163,90 +215,38 @@ function moveEnemies(scene){
   });
 }
 
-function damageCrystal(scene,amount){
-  crystalHP -= amount;
-  hpText.setText("Crystal HP: " + crystalHP);
-
-  if(crystalHP <= 0){
-    const reachedLevel = wave - 1;
-    if(reachedLevel > playerLevel){
-      playerLevel = reachedLevel;
-      saveProgress(playerLevel);
-    }
-    scene.scene.start("MenuScene");
-  }
-}
-
-/* ================= MISSING CORE FUNCTIONS ================= */
-
-function drawPath(scene){
-  const g = scene.add.graphics();
-  g.lineStyle(20, 0x444444, 1);
-  g.beginPath();
-  g.moveTo(path[0].x, path[0].y);
-  for(let i = 1; i < path.length; i++){
-    g.lineTo(path[i].x, path[i].y);
-  }
-  g.strokePath();
-}
-
-function tryPlaceTower(scene, x, y){
+function tryPlaceTower(scene,x,y){
   if(towers.length >= MAX_TOWERS) return;
-
   const tData = SHAPES[selectedTower];
   if(money < tData.cost) return;
-
-  for(let p of path){
-    if(Phaser.Math.Distance.Between(x, y, p.x, p.y) < 50) return;
-  }
-
   money -= tData.cost;
-  moneyText.setText("Money: " + money);
-
-  addTower(scene, x, y, selectedTower);
-  towerCountText.setText("Towers: " + towers.length + " / " + MAX_TOWERS);
+  moneyText.setText("Money: "+money);
+  addTower(scene,x,y,selectedTower);
+  towerCountText.setText("Towers: "+towers.length+" / "+MAX_TOWERS);
 }
 
-function addTower(scene, x, y, type){
+function addTower(scene,x,y,type){
   const s = SHAPES[type];
-
-  towers.push({
-    x, y,
-    range: s.range,
-    dmg: s.dmg,
-    rate: s.rate,
-    nextTick: 0,
-    type
-  });
-
-  if(type === "circle"){
-    scene.add.circle(x, y, 14, s.color).setStrokeStyle(2, 0xffffff);
-  }
-  if(type === "square"){
-    scene.add.rectangle(x, y, 28, 28, s.color).setStrokeStyle(2, 0xffffff);
-  }
-  if(type === "triangle"){
-    scene.add.polygon(x, y, [0,-16,-14,12,14,12], s.color).setStrokeStyle(2, 0xffffff);
-  }
+  towers.push({x,y,range:s.range,dmg:s.dmg,rate:s.rate,nextTick:0,type});
+  scene.add.circle(x,y,14,s.color).setStrokeStyle(2,0xffffff);
 }
 
 function changeSelection(type){
-  selectedTower = type;
-  selectText.setText("Selected: " + type.toUpperCase());
+  selectedTower=type;
+  selectText.setText("Selected: "+type.toUpperCase());
 }
 
-function updateTowerDamage(time){
+function updateTowerDamage(scene,time){
   towers.forEach(t=>{
     if(time < t.nextTick) return;
     t.nextTick = time + t.rate;
-    const rangeSq = t.range * t.range;
 
     enemies.forEach(e=>{
       if(!e.alive) return;
-      const dx = e.x - t.x;
-      const dy = e.y - t.y;
-      if(dx*dx + dy*dy <= rangeSq){
-        damageEnemy(e, t.dmg);
+      const dx=e.x-t.x, dy=e.y-t.y;
+      if(dx*dx+dy*dy<=t.range*t.range){
+        scene.sound.play("towerAttack",{volume:0.2});
+        damageEnemy(scene,e,t.dmg);
       }
     });
   });
@@ -254,32 +254,46 @@ function updateTowerDamage(time){
 
 function drawLasers(){
   laserGraphics.clear();
-
-  towers.forEach(t=>{
-    enemies.forEach(e=>{
-      if(!e.alive) return;
-      const dx = e.x - t.x;
-      const dy = e.y - t.y;
-      if(dx*dx + dy*dy <= t.range * t.range){
-        laserGraphics.lineStyle(2, 0xffffff, 0.4);
-        laserGraphics.beginPath();
-        laserGraphics.moveTo(t.x, t.y);
-        laserGraphics.lineTo(e.x, e.y);
-        laserGraphics.strokePath();
-      }
-    });
-  });
 }
 
-function damageEnemy(e, dmg){
-  e.hp -= dmg;
+function damageEnemy(scene,e,dmg){
+  e.hp-=dmg;
   e.text.setText(Math.floor(e.hp));
 
-  if(e.hp <= 0){
-    e.alive = false;
+  if(e.hp<=0){
+    if(e.boss){
+      scene.sound.play("bossKill");
+    }
+    e.alive=false;
     e.body.destroy();
     e.text.destroy();
-    money += 15;
-    moneyText.setText("Money: " + money);
+    money+=15;
+    moneyText.setText("Money: "+money);
   }
+}
+
+function damageCrystal(scene,amount){
+  crystalHP -= amount;
+  hpText.setText("Crystal HP: " + crystalHP);
+
+  if(crystalHP <= 0){
+    scene.sound.play("lose");
+
+    const reachedLevel = wave - 1;
+    if(reachedLevel > playerLevel){
+      playerLevel = reachedLevel;
+      saveProgress(playerLevel);
+    }
+
+    scene.scene.start("MenuScene");
+  }
+}
+
+function drawPath(scene){
+  const g=scene.add.graphics();
+  g.lineStyle(20,0x444444,1);
+  g.beginPath();
+  g.moveTo(path[0].x,path[0].y);
+  for(let i=1;i<path.length;i++) g.lineTo(path[i].x,path[i].y);
+  g.strokePath();
 }
