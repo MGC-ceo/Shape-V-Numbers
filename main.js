@@ -8,7 +8,7 @@ const config = {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH
   },
-  scene: [MenuScene, SoloScene, PartyScene]
+  scene: [MenuScene, SoloScene] // ✅ Removed PartyScene
 };
 
 new Phaser.Game(config);
@@ -110,54 +110,21 @@ MenuScene.prototype.create = function(){
   this.cameras.main.fadeIn(600);
   startMenuMusic(this);
 
-  if(!this.textures.exists("particle")){
-    const g = this.add.graphics();
-    g.fillStyle(0xffffff);
-    g.fillCircle(4,4,4);
-    g.generateTexture("particle",8,8);
-    g.destroy();
-  }
-
-  this.add.particles(0, 0, "particle", {
-    x: { min: 0, max: w },
-    y: h,
-    lifespan: 6000,
-    speedY: { min: -20, max: -50 },
-    scale: { start: 0.4, end: 0 },
-    quantity: 2,
-    blendMode: 'ADD'
-  });
-
   this.add.rectangle(centerX,centerY,500,450,0x000000,0.4)
       .setStrokeStyle(2,0x00ffcc);
 
-  const container = this.add.container(centerX, centerY);
+  const title = this.add.text(centerX,centerY-100,"SHAPE DEFENSE",
+      {fontSize:"42px",color:"#ffffff"}).setOrigin(0.5);
 
-  const title = this.add.text(0,-150,"SHAPE DEFENSE",{fontSize:"42px",color:"#ffffff"}).setOrigin(0.5);
-  const level = this.add.text(0,-100,"LEVEL: "+playerLevel,{fontSize:"20px",color:"#00ffcc"}).setOrigin(0.5);
-
-  const playBtn = this.add.text(0,0,"PLAY",{fontSize:"36px",color:"#ffffff"}).setOrigin(0.5).setInteractive();
-  const partyBtn = this.add.text(0,100,"PARTY",{fontSize:"28px",color:"#ffffff"}).setOrigin(0.5).setInteractive();
-
-  container.add([title,level,playBtn,partyBtn]);
-
-  this.tweens.add({
-    targets: container,
-    y: centerY - 10,
-    duration: 2000,
-    yoyo:true,
-    repeat:-1
-  });
+  const playBtn = this.add.text(centerX,centerY,"PLAY",
+      {fontSize:"36px",color:"#ffffff"})
+      .setOrigin(0.5)
+      .setInteractive();
 
   playBtn.on("pointerdown", ()=>{
     tone(this,700,120,0.4);
     this.cameras.main.fadeOut(400);
     this.time.delayedCall(400,()=>this.scene.start("SoloScene"));
-  });
-
-  partyBtn.on("pointerdown", ()=>{
-    tone(this,500,120,0.4);
-    this.scene.start("PartyScene");
   });
 };
 
@@ -200,14 +167,10 @@ SoloScene.prototype.create = function(){
 
   moneyText=this.add.text(10,10,"Money: "+money,{color:"#fff"});
   waveText=this.add.text(10,30,"Wave: 1",{color:"#fff"});
-  selectText=this.add.text(10,50,"Selected: CIRCLE",{color:"#fff"});
-  hpText=this.add.text(10,70,"Crystal HP: "+crystalHP,{color:"#00ffff"});
-  towerCountText=this.add.text(10,90,"Towers: 0 / "+MAX_TOWERS,{color:"#aaa"});
+  hpText=this.add.text(10,50,"Crystal HP: "+crystalHP,{color:"#00ffff"});
 
   this.input.keyboard.on("keydown-P",()=>{
     paused=!paused;
-    this.scene.pause();
-    if(paused) this.add.text(400,300,"PAUSED",{fontSize:"48px",color:"#ffffff"}).setOrigin(0.5);
   });
 
   this.input.on("pointerdown",p=>tryPlaceTower(this,p.x,p.y));
@@ -250,6 +213,27 @@ function spawnWave(scene){
 
   wave++;
   waveText.setText("Wave: "+wave);
+}
+
+function moveEnemies(scene){
+  enemies.forEach(e=>{
+    if(!e.alive)return;
+    const next=path[e.pathIndex+1];
+    if(!next){
+      damageCrystal(scene,1);
+      e.alive=false;
+      e.body.destroy();
+      e.text.destroy();
+      return;
+    }
+    const dx=next.x-e.x,dy=next.y-e.y;
+    const d=Math.hypot(dx,dy);
+    e.x+=(dx/d)*e.speed;
+    e.y+=(dy/d)*e.speed;
+    e.body.setPosition(e.x,e.y);
+    e.text.setPosition(e.x-10,e.y-12);
+    if(d<4)e.pathIndex++;
+  });
 }
 
 function updateTowerDamage(scene,time){
