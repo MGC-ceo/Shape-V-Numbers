@@ -37,6 +37,8 @@ function tone(scene, freq = 440, duration = 150, volume = 0.2, type="sine"){
   const ctx = scene.sound.context;
   if(!ctx) return;
 
+  if(ctx.state === "suspended") ctx.resume();
+
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
 
@@ -65,14 +67,12 @@ function stopMusic(){
 function startMenuMusic(scene){
   stopMusic();
 
-  // Bass pulse
   musicEvents.push(scene.time.addEvent({
     delay: 800,
     loop: true,
     callback: ()=> tone(scene, 180, 400, 0.08, "triangle")
   }));
 
-  // Light ambient melody
   musicEvents.push(scene.time.addEvent({
     delay: 1600,
     loop: true,
@@ -83,14 +83,12 @@ function startMenuMusic(scene){
 function startGameMusic(scene){
   stopMusic();
 
-  // Low driving bass
   musicEvents.push(scene.time.addEvent({
     delay: 600,
     loop: true,
     callback: ()=> tone(scene, 120, 300, 0.09, "square")
   }));
 
-  // Mid layer rhythm
   musicEvents.push(scene.time.addEvent({
     delay: 900,
     loop: true,
@@ -111,21 +109,27 @@ MenuScene.prototype.create = function(){
   const centerY = h/2;
 
   this.cameras.main.fadeIn(600);
- if (this.sound.context.state === "suspended") {
-  this.sound.context.resume();
-}
   startMenuMusic(this);
 
-  /* ===== PARTICLES BACKGROUND ===== */
-  this.add.particles(0, 0, null, {
-  x: { min: 0, max: w },
-  y: h,
-  lifespan: 6000,
-  speedY: { min: -20, max: -50 },
-  scale: { start: 0.4, end: 0 },
-  quantity: 2,
-  blendMode: 'ADD'
-});
+  /* ===== CREATE PARTICLE TEXTURE ONCE ===== */
+  if(!this.textures.exists("particle")){
+    const g = this.add.graphics();
+    g.fillStyle(0xffffff);
+    g.fillCircle(4,4,4);
+    g.generateTexture("particle",8,8);
+    g.destroy();
+  }
+
+  /* ===== PARTICLES ===== */
+  this.add.particles(0, 0, "particle", {
+    x: { min: 0, max: w },
+    y: h,
+    lifespan: 6000,
+    speedY: { min: -20, max: -50 },
+    scale: { start: 0.4, end: 0 },
+    quantity: 2,
+    blendMode: 'ADD'
+  });
 
   /* ===== PANEL ===== */
   this.add.rectangle(centerX,centerY,500,450,0x000000,0.4)
@@ -208,9 +212,6 @@ let laserGraphics,moneyText,waveText,selectText,hpText,towerCountText;
 SoloScene.prototype.create = function(){
 
   this.cameras.main.fadeIn(400);
- if (this.sound.context.state === "suspended") {
-  this.sound.context.resume();
-}
   startGameMusic(this);
 
   enemies=[];
@@ -220,13 +221,13 @@ SoloScene.prototype.create = function(){
   crystalHP=20;
   selectedTower="circle";
 
-  /* Subtle gameplay particles */
-this.add.particles(400, 300, null, {
-  lifespan: 2000,
-  scale: { start: 0.2, end: 0 },
-  quantity: 1,
-  blendMode: "ADD"
-});
+  /* Gameplay particles */
+  this.add.particles(400, 300, "particle", {
+    lifespan: 2000,
+    scale: { start: 0.2, end: 0 },
+    quantity: 1,
+    blendMode: "ADD"
+  });
 
   drawPath(this);
   laserGraphics=this.add.graphics();
