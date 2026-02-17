@@ -36,7 +36,6 @@ function tone(scene, freq = 440, duration = 150, volume = 0.2, type="sine"){
 
   const ctx = scene.sound.context;
   if(!ctx) return;
-
   if(ctx.state === "suspended") ctx.resume();
 
   const osc = ctx.createOscillator();
@@ -111,7 +110,6 @@ MenuScene.prototype.create = function(){
   this.cameras.main.fadeIn(600);
   startMenuMusic(this);
 
-  /* ===== CREATE PARTICLE TEXTURE ONCE ===== */
   if(!this.textures.exists("particle")){
     const g = this.add.graphics();
     g.fillStyle(0xffffff);
@@ -120,7 +118,6 @@ MenuScene.prototype.create = function(){
     g.destroy();
   }
 
-  /* ===== PARTICLES ===== */
   this.add.particles(0, 0, "particle", {
     x: { min: 0, max: w },
     y: h,
@@ -131,7 +128,6 @@ MenuScene.prototype.create = function(){
     blendMode: 'ADD'
   });
 
-  /* ===== PANEL ===== */
   this.add.rectangle(centerX,centerY,500,450,0x000000,0.4)
       .setStrokeStyle(2,0x00ffcc);
 
@@ -165,36 +161,13 @@ MenuScene.prototype.create = function(){
   });
 };
 
-/* ================= PARTY SCENE ================= */
-
-function PartyScene(){ Phaser.Scene.call(this,{key:"PartyScene"}); }
-PartyScene.prototype = Object.create(Phaser.Scene.prototype);
-
-PartyScene.prototype.create = function(){
-  this.cameras.main.fadeIn(400);
-
-  this.add.text(400,80,"SHAPE STATS",{fontSize:"36px",color:"#ffffff"}).setOrigin(0.5);
-
-  const stats = [
-    "CIRCLE\nDamage: Medium\nRange: Medium\nAttack Speed: Normal",
-    "SQUARE\nDamage: High\nRange: Large\nAttack Speed: Slow",
-    "TRIANGLE\nDamage: Medium\nRange: Short\nAttack Speed: Fast"
-  ];
-
-  stats.forEach((s,i)=>{
-    this.add.text(400,180+i*120,s,{fontSize:"18px",color:"#00ffcc",align:"center"}).setOrigin(0.5);
-  });
-
-  const backBtn = this.add.text(400,540,"BACK",{fontSize:"24px",color:"#ffffff"}).setOrigin(0.5).setInteractive();
-  backBtn.on("pointerdown", ()=> this.scene.start("MenuScene"));
-};
-
 /* ================= SOLO GAME ================= */
 
 function SoloScene(){ Phaser.Scene.call(this,{key:"SoloScene"}); }
 SoloScene.prototype = Object.create(Phaser.Scene.prototype);
 
 const MAX_TOWERS = 25;
+let paused = false;
 
 const SHAPES = {
   circle:{range:130,dmg:2,rate:600,cost:40,color:0x00ffcc},
@@ -220,14 +193,7 @@ SoloScene.prototype.create = function(){
   money=150;
   crystalHP=20;
   selectedTower="circle";
-
-  /* Gameplay particles */
-  this.add.particles(400, 300, "particle", {
-    lifespan: 2000,
-    scale: { start: 0.2, end: 0 },
-    quantity: 1,
-    blendMode: "ADD"
-  });
+  paused=false;
 
   drawPath(this);
   laserGraphics=this.add.graphics();
@@ -238,17 +204,20 @@ SoloScene.prototype.create = function(){
   hpText=this.add.text(10,70,"Crystal HP: "+crystalHP,{color:"#00ffff"});
   towerCountText=this.add.text(10,90,"Towers: 0 / "+MAX_TOWERS,{color:"#aaa"});
 
-  this.input.on("pointerdown",p=>tryPlaceTower(this,p.x,p.y));
+  this.input.keyboard.on("keydown-P",()=>{
+    paused=!paused;
+    this.scene.pause();
+    if(paused) this.add.text(400,300,"PAUSED",{fontSize:"48px",color:"#ffffff"}).setOrigin(0.5);
+  });
 
-  this.input.keyboard.on("keydown-ONE",()=>{tone(this,600,80);changeSelection("circle");});
-  this.input.keyboard.on("keydown-TWO",()=>{tone(this,500,80);changeSelection("square");});
-  this.input.keyboard.on("keydown-THREE",()=>{tone(this,400,80);changeSelection("triangle");});
+  this.input.on("pointerdown",p=>tryPlaceTower(this,p.x,p.y));
 
   spawnWave(this);
   this.time.addEvent({delay:7000,loop:true,callback:()=>spawnWave(this)});
 };
 
 SoloScene.prototype.update=function(time){
+  if(paused) return;
   moveEnemies(this);
   updateTowerDamage(this,time);
 };
@@ -256,65 +225,35 @@ SoloScene.prototype.update=function(time){
 /* ================= GAME LOGIC ================= */
 
 function spawnWave(scene){
-  tone(scene,300,200,0.4);
+
+  const isBossWave = wave % 5 === 0;
 
   for(let i=0;i<5+wave;i++){
-    const e={x:path[0].x,y:path[0].y,hp:12+wave*3,speed:0.8,pathIndex:0,alive:true};
-    e.body=scene.add.circle(e.x,e.y,14,0xff5555);
+
+    const hp = isBossWave ? 100 : 12+wave*3;
+    const size = isBossWave ? 24 : 14;
+    const color = isBossWave ? 0xff0000 : 0xff5555;
+
+    const e={
+      x:path[0].x,
+      y:path[0].y,
+      hp:hp,
+      speed:isBossWave ? 0.5 : 0.8,
+      pathIndex:0,
+      alive:true
+    };
+
+    e.body=scene.add.circle(e.x,e.y,size,color);
     e.text=scene.add.text(e.x-10,e.y-12,e.hp,{color:"#fff"});
     enemies.push(e);
   }
+
   wave++;
   waveText.setText("Wave: "+wave);
 }
 
-function moveEnemies(scene){
-  enemies.forEach(e=>{
-    if(!e.alive)return;
-    const next=path[e.pathIndex+1];
-    if(!next){
-      damageCrystal(scene,1);
-      e.alive=false;
-      e.body.destroy();
-      e.text.destroy();
-      return;
-    }
-    const dx=next.x-e.x,dy=next.y-e.y;
-    const d=Math.hypot(dx,dy);
-    e.x+=(dx/d)*e.speed;
-    e.y+=(dy/d)*e.speed;
-    e.body.setPosition(e.x,e.y);
-    e.text.setPosition(e.x-10,e.y-12);
-    if(d<4)e.pathIndex++;
-  });
-}
-
-function tryPlaceTower(scene,x,y){
-  if(towers.length>=MAX_TOWERS)return;
-  const tData=SHAPES[selectedTower];
-  if(money<tData.cost)return;
-
-  money-=tData.cost;
-  moneyText.setText("Money: "+money);
-
-  towers.push({x,y,...tData,nextTick:0,type:selectedTower});
-
-  if(selectedTower==="circle")
-    scene.add.circle(x,y,14,tData.color).setStrokeStyle(2,0xffffff);
-  if(selectedTower==="square")
-    scene.add.rectangle(x,y,28,28,tData.color).setStrokeStyle(2,0xffffff);
-  if(selectedTower==="triangle")
-    scene.add.polygon(x,y,[0,-16,-14,12,14,12],tData.color).setStrokeStyle(2,0xffffff);
-
-  towerCountText.setText("Towers: "+towers.length+" / "+MAX_TOWERS);
-}
-
-function changeSelection(type){
-  selectedTower=type;
-  selectText.setText("Selected: "+type.toUpperCase());
-}
-
 function updateTowerDamage(scene,time){
+
   laserGraphics.clear();
 
   towers.forEach(t=>{
@@ -324,15 +263,15 @@ function updateTowerDamage(scene,time){
     enemies.forEach(e=>{
       if(!e.alive)return;
       const dx=e.x-t.x,dy=e.y-t.y;
+
       if(dx*dx+dy*dy<=t.range*t.range){
 
-        laserGraphics.lineStyle(2,0xffffff,0.7);
-        laserGraphics.beginPath();
-        laserGraphics.moveTo(t.x,t.y);
-        laserGraphics.lineTo(e.x,e.y);
-        laserGraphics.strokePath();
+        laserGraphics.lineStyle(4,0xffffff,0.2);
+        laserGraphics.strokeLineShape(new Phaser.Geom.Line(t.x,t.y,e.x,e.y));
 
-        tone(scene,800,50,0.5);
+        laserGraphics.lineStyle(2,0xffffff,0.9);
+        laserGraphics.strokeLineShape(new Phaser.Geom.Line(t.x,t.y,e.x,e.y));
+
         damageEnemy(e,t.dmg);
       }
     });
@@ -354,9 +293,9 @@ function damageEnemy(e,dmg){
 function damageCrystal(scene,amount){
   crystalHP-=amount;
   hpText.setText("Crystal HP: "+crystalHP);
+  scene.cameras.main.shake(200,0.01);
   if(crystalHP<=0){
     stopMusic();
-    tone(scene,120,400,0.5);
     scene.scene.start("MenuScene");
   }
 }
