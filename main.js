@@ -114,16 +114,15 @@ MenuScene.prototype.create = function(){
   startMenuMusic(this);
 
   /* ===== PARTICLES BACKGROUND ===== */
-  const particles = this.add.particles(0xffffff);
-  particles.createEmitter({
-    x: {min:0,max:w},
-    y: h,
-    lifespan: 6000,
-    speedY: {min:-20,max:-50},
-    scale: {start:0.4,end:0},
-    quantity: 2,
-    blendMode: 'ADD'
-  });
+  this.add.particles(0, 0, null, {
+  x: { min: 0, max: w },
+  y: h,
+  lifespan: 6000,
+  speedY: { min: -20, max: -50 },
+  scale: { start: 0.4, end: 0 },
+  quantity: 2,
+  blendMode: 'ADD'
+});
 
   /* ===== PANEL ===== */
   this.add.rectangle(centerX,centerY,500,450,0x000000,0.4)
@@ -216,14 +215,12 @@ SoloScene.prototype.create = function(){
   selectedTower="circle";
 
   /* Subtle gameplay particles */
-  const particles = this.add.particles(0x00ffcc);
-  particles.createEmitter({
-    x:400,y:300,
-    lifespan:2000,
-    scale:{start:0.2,end:0},
-    quantity:1,
-    blendMode:"ADD"
-  });
+this.add.particles(400, 300, null, {
+  lifespan: 2000,
+  scale: { start: 0.2, end: 0 },
+  quantity: 1,
+  blendMode: "ADD"
+});
 
   drawPath(this);
   laserGraphics=this.add.graphics();
