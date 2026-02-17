@@ -111,6 +111,9 @@ MenuScene.prototype.create = function(){
   const centerY = h/2;
 
   this.cameras.main.fadeIn(600);
+ if (this.sound.context.state === "suspended") {
+  this.sound.context.resume();
+}
   startMenuMusic(this);
 
   /* ===== PARTICLES BACKGROUND ===== */
@@ -205,6 +208,9 @@ let laserGraphics,moneyText,waveText,selectText,hpText,towerCountText;
 SoloScene.prototype.create = function(){
 
   this.cameras.main.fadeIn(400);
+ if (this.sound.context.state === "suspended") {
+  this.sound.context.resume();
+}
   startGameMusic(this);
 
   enemies=[];
