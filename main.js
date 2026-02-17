@@ -26,17 +26,12 @@ function loadProgress(){
 
 let playerLevel = loadProgress();
 
-/* ================= SOUND LOADER ================= */
+/* ================= SAFE SOUND SYSTEM ================= */
 
-function loadSounds(scene){
-  scene.load.audio("menuMusic","https://actions.google.com/sounds/v1/ambiences/space_ambience.ogg");
-  scene.load.audio("mapMusic","https://actions.google.com/sounds/v1/ambiences/battlefield_ambience.ogg");
-  scene.load.audio("towerAttack","https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg");
-  scene.load.audio("click","https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg");
-  scene.load.audio("roundStart","https://actions.google.com/sounds/v1/cartoon/concussive_hit_guitar_boing.ogg");
-  scene.load.audio("lose","https://actions.google.com/sounds/v1/cartoon/boing.ogg");
-  scene.load.audio("bossKill","https://actions.google.com/sounds/v1/cartoon/metal_thud_and_wobble.ogg");
-  scene.load.audio("bossTheme","https://actions.google.com/sounds/v1/ambiences/alien_ship.ogg");
+function safePlay(scene,key,config){
+  if(scene.sound.get(key)){
+    scene.sound.play(key,config);
+  }
 }
 
 /* ================= MENU SCENE ================= */
@@ -44,30 +39,24 @@ function loadSounds(scene){
 function MenuScene(){ Phaser.Scene.call(this,{key:"MenuScene"}); }
 MenuScene.prototype = Object.create(Phaser.Scene.prototype);
 
-MenuScene.prototype.preload = function(){
-  loadSounds(this);
-};
-
 MenuScene.prototype.create = function(){
 
   playerLevel = loadProgress();
 
-  this.menuMusic = this.sound.add("menuMusic",{loop:true,volume:0.4});
-  this.menuMusic.play();
-
   this.add.text(400,80,"SHAPE DEFENSE",{fontSize:"42px",color:"#ffffff"}).setOrigin(0.5);
   this.add.text(400,130,"LEVEL: "+playerLevel,{fontSize:"20px",color:"#00ffcc"}).setOrigin(0.5);
 
-  const playBtn = this.add.text(400,250,"PLAY",{fontSize:"36px",color:"#ffffff"}).setOrigin(0.5).setInteractive();
+  const playBtn = this.add.text(400,250,"PLAY",{fontSize:"36px",color:"#ffffff"})
+  .setOrigin(0.5).setInteractive();
+
   playBtn.on("pointerdown", ()=>{
-    this.sound.play("click");
-    this.menuMusic.stop();
     this.scene.start("SoloScene");
   });
 
-  const partyBtn = this.add.text(400,380,"PARTY",{fontSize:"28px",color:"#ffffff"}).setOrigin(0.5).setInteractive();
+  const partyBtn = this.add.text(400,380,"PARTY",{fontSize:"28px",color:"#ffffff"})
+  .setOrigin(0.5).setInteractive();
+
   partyBtn.on("pointerdown", ()=>{
-    this.sound.play("click");
     this.scene.start("PartyScene");
   });
 };
@@ -81,9 +70,10 @@ PartyScene.prototype.create = function(){
 
   this.add.text(400,80,"SHAPE STATS",{fontSize:"36px",color:"#ffffff"}).setOrigin(0.5);
 
-  const backBtn = this.add.text(400,540,"BACK",{fontSize:"24px",color:"#ffffff"}).setOrigin(0.5).setInteractive();
+  const backBtn = this.add.text(400,540,"BACK",{fontSize:"24px",color:"#ffffff"})
+  .setOrigin(0.5).setInteractive();
+
   backBtn.on("pointerdown", ()=>{
-    this.sound.play("click");
     this.scene.start("MenuScene");
   });
 };
@@ -119,11 +109,6 @@ SoloScene.prototype.create = function(){
 
   drawPath(this);
 
-  this.mapMusic = this.sound.add("mapMusic",{loop:true,volume:0.3});
-  this.mapMusic.play();
-
-  this.sound.play("roundStart");
-
   laserGraphics = this.add.graphics();
 
   moneyText = this.add.text(10,10,"Money: "+money,{color:"#fff"});
@@ -134,9 +119,9 @@ SoloScene.prototype.create = function(){
 
   this.input.on("pointerdown", p => tryPlaceTower(this, p.x, p.y));
 
-  this.input.keyboard.on("keydown-ONE", ()=>{ this.sound.play("click"); changeSelection("circle"); });
-  this.input.keyboard.on("keydown-TWO", ()=>{ this.sound.play("click"); changeSelection("square"); });
-  this.input.keyboard.on("keydown-THREE", ()=>{ this.sound.play("click"); changeSelection("triangle"); });
+  this.input.keyboard.on("keydown-ONE", ()=>changeSelection("circle"));
+  this.input.keyboard.on("keydown-TWO", ()=>changeSelection("square"));
+  this.input.keyboard.on("keydown-THREE", ()=>changeSelection("triangle"));
 
   spawnWave(this);
   this.time.addEvent({ delay:7000, loop:true, callback:()=>spawnWave(this) });
@@ -152,10 +137,6 @@ SoloScene.prototype.update = function(time){
 
 function spawnWave(scene){
   const isBossWave = wave % 5 === 0;
-
-  if(isBossWave){
-    scene.sound.play("bossTheme",{volume:0.5});
-  }
 
   for(let i=0;i<5+wave;i++){
     const hp = isBossWave ? 150 + wave*10 : 12 + wave*3;
@@ -227,7 +208,6 @@ function updateTowerDamage(scene,time){
       if(!e.alive) return;
       const dx=e.x-t.x, dy=e.y-t.y;
       if(dx*dx+dy*dy<=t.range*t.range){
-        scene.sound.play("towerAttack",{volume:0.15});
         damageEnemy(scene,e,t.dmg);
       }
     });
@@ -243,9 +223,6 @@ function damageEnemy(scene,e,dmg){
   e.text.setText(Math.floor(e.hp));
 
   if(e.hp<=0){
-    if(e.boss){
-      scene.sound.play("bossKill");
-    }
     e.alive=false;
     e.body.destroy();
     e.text.destroy();
@@ -259,14 +236,11 @@ function damageCrystal(scene,amount){
   hpText.setText("Crystal HP: " + crystalHP);
 
   if(crystalHP <= 0){
-    scene.sound.play("lose");
-
     const reachedLevel = wave - 1;
     if(reachedLevel > playerLevel){
       playerLevel = reachedLevel;
       saveProgress(playerLevel);
     }
-
     scene.scene.start("MenuScene");
   }
 }
