@@ -58,26 +58,25 @@ MenuScene.prototype.create = function(){
   const centerX = this.cameras.main.width/2;
   const centerY = this.cameras.main.height/2;
 
-  // Fade in
   this.cameras.main.fadeIn(600);
 
-  // Background particles
-  const particles = this.add.particles(0xffffff);
-  particles.createEmitter({
-    x:{min:0,max:800},
-    y:600,
-    lifespan:6000,
-    speedY:{min:-20,max:-50},
-    scale:{start:0.4,end:0},
-    quantity:2,
-    blendMode:"ADD"
+  /* ===== FIXED PARTICLES FOR PHASER 3.90 ===== */
+
+  const particles = this.add.particles(0,0,null,{
+    x: { min: 0, max: 800 },
+    y: 600,
+    lifespan: 6000,
+    speedY: { min: -20, max: -50 },
+    scale: { start: 0.4, end: 0 },
+    quantity: 2,
+    blendMode: 'ADD'
   });
 
-  // UI panel frame
+  /* ===== UI PANEL ===== */
+
   const panel = this.add.rectangle(centerX,centerY,500,450,0x000000,0.4)
     .setStrokeStyle(2,0x00ffcc);
 
-  // Floating animation container
   const container = this.add.container(centerX, centerY);
 
   const title = this.add.text(0,-150,"SHAPE DEFENSE",{fontSize:"42px",color:"#ffffff"}).setOrigin(0.5);
@@ -96,7 +95,6 @@ MenuScene.prototype.create = function(){
 
   container.add([title,level,playBtn,more,partyBtn]);
 
-  // Floating animation
   this.tweens.add({
     targets: container,
     y: centerY - 10,
