@@ -7,53 +7,41 @@
   <!-- Phaser Engine -->
   <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js"></script>
 
-  <!-- Your Game Code -->
+  <!-- Game Code -->
   <script src="main.js" defer></script>
 
   <style>
-  body {
-    margin: 0;
-    background: #111;
-    font-family: monospace;
-    text-align: center;
-  }
+    body {
+      margin: 0;
+      background: #111;
+      font-family: monospace;
+      text-align: center;
+    }
 
-  .ad-container {
-    margin: 12px 0;
-    min-height: 90px; /* space for ads */
-  }
+    .ad-container {
+      margin: 12px 0;
+      min-height: 90px;
+    }
 
-  #game-container {
-    min-height: 70vh;   /* IMPORTANT: not 100vh */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
+    #game-container {
+      min-height: 70vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
 
-  canvas {
-    display: block;
-    margin: 0 auto;
-  }
-</style>
-
+    canvas {
+      display: block;
+      margin: 0 auto;
+    }
+  </style>
 </head>
+
 <body>
-
-  <!-- Ad ABOVE the game -->
-  <div style="text-align:center; margin:10px 0;">
-    <ins class="adsbygoogle"
-         style="display:block"
-         data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
-         data-ad-slot="YYYYYYYYYY"
-         data-ad-format="auto"
-         data-full-width-responsive="true"></ins>
-  </div>
-
-  <body>
 
   <!-- TOP AD -->
   <div class="ad-container">
-    <!-- Ad will go here later -->
+    <!-- Ad placeholder -->
   </div>
 
   <!-- GAME -->
@@ -61,33 +49,8 @@
 
   <!-- BOTTOM AD -->
   <div class="ad-container">
-    <!-- Ad will go here later -->
+    <!-- Ad placeholder -->
   </div>
 
 </body>
-
-
-<!-- Ad BELOW the game -->
-<div style="text-align:center; margin:10px 0;">
-  <ins class="adsbygoogle"
-       style="display:block"
-       data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
-       data-ad-slot="YYYYYYYYYY"
-       data-ad-format="auto"
-       data-full-width-responsive="true"></ins>
-</div>
-
-  <!-- UI -->
-  <div id="ui">
-    <button onclick="togglePause()">Pause</button>
-    <button onclick="restartGame()">Restart</button>
-  </div>
-<script async
-  src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js">
-</script>
-
-<script>
-  (adsbygoogle = window.adsbygoogle || []).push({});
-</script>
-
-</body>
+</html>
