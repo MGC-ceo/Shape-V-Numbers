@@ -29,14 +29,14 @@ let playerLevel = loadProgress();
 /* ================= SOUND LOADER ================= */
 
 function loadSounds(scene){
-  scene.load.audio("menuMusic","https://cdn.pixabay.com/download/audio/2022/03/15/audio_115b9e6e3c.mp3");
-  scene.load.audio("mapMusic","https://cdn.pixabay.com/download/audio/2022/11/17/audio_4c8b4b0b1c.mp3");
-  scene.load.audio("towerAttack","https://cdn.pixabay.com/download/audio/2022/03/10/audio_0c4b7b0f09.mp3");
-  scene.load.audio("click","https://cdn.pixabay.com/download/audio/2022/03/15/audio_4d6d3b3a4b.mp3");
-  scene.load.audio("roundStart","https://cdn.pixabay.com/download/audio/2022/03/15/audio_2c3c9a3b1a.mp3");
-  scene.load.audio("lose","https://cdn.pixabay.com/download/audio/2022/03/15/audio_8c4d1c9f1f.mp3");
-  scene.load.audio("bossKill","https://cdn.pixabay.com/download/audio/2022/03/15/audio_7c4d1c9f22.mp3");
-  scene.load.audio("bossTheme","https://cdn.pixabay.com/download/audio/2022/10/20/audio_8c3f7d4a33.mp3");
+  scene.load.audio("menuMusic","https://actions.google.com/sounds/v1/ambiences/space_ambience.ogg");
+  scene.load.audio("mapMusic","https://actions.google.com/sounds/v1/ambiences/battlefield_ambience.ogg");
+  scene.load.audio("towerAttack","https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg");
+  scene.load.audio("click","https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg");
+  scene.load.audio("roundStart","https://actions.google.com/sounds/v1/cartoon/concussive_hit_guitar_boing.ogg");
+  scene.load.audio("lose","https://actions.google.com/sounds/v1/cartoon/boing.ogg");
+  scene.load.audio("bossKill","https://actions.google.com/sounds/v1/cartoon/metal_thud_and_wobble.ogg");
+  scene.load.audio("bossTheme","https://actions.google.com/sounds/v1/ambiences/alien_ship.ogg");
 }
 
 /* ================= MENU SCENE ================= */
@@ -52,7 +52,7 @@ MenuScene.prototype.create = function(){
 
   playerLevel = loadProgress();
 
-  this.menuMusic = this.sound.add("menuMusic",{loop:true,volume:0.5});
+  this.menuMusic = this.sound.add("menuMusic",{loop:true,volume:0.4});
   this.menuMusic.play();
 
   this.add.text(400,80,"SHAPE DEFENSE",{fontSize:"42px",color:"#ffffff"}).setOrigin(0.5);
@@ -64,8 +64,6 @@ MenuScene.prototype.create = function(){
     this.menuMusic.stop();
     this.scene.start("SoloScene");
   });
-
-  this.add.text(400,300,"More Content Soon",{fontSize:"16px",color:"#888"}).setOrigin(0.5);
 
   const partyBtn = this.add.text(400,380,"PARTY",{fontSize:"28px",color:"#ffffff"}).setOrigin(0.5).setInteractive();
   partyBtn.on("pointerdown", ()=>{
@@ -79,23 +77,9 @@ MenuScene.prototype.create = function(){
 function PartyScene(){ Phaser.Scene.call(this,{key:"PartyScene"}); }
 PartyScene.prototype = Object.create(Phaser.Scene.prototype);
 
-PartyScene.prototype.preload = function(){
-  loadSounds(this);
-};
-
 PartyScene.prototype.create = function(){
 
   this.add.text(400,80,"SHAPE STATS",{fontSize:"36px",color:"#ffffff"}).setOrigin(0.5);
-
-  const stats = [
-    "CIRCLE\nDamage: Medium\nRange: Medium\nAttack Speed: Normal",
-    "SQUARE\nDamage: High\nRange: Large\nAttack Speed: Slow",
-    "TRIANGLE\nDamage: Medium\nRange: Short\nAttack Speed: Fast"
-  ];
-
-  stats.forEach((s,i)=>{
-    this.add.text(400,180+i*120,s,{fontSize:"18px",color:"#00ffcc",align:"center"}).setOrigin(0.5);
-  });
 
   const backBtn = this.add.text(400,540,"BACK",{fontSize:"24px",color:"#ffffff"}).setOrigin(0.5).setInteractive();
   backBtn.on("pointerdown", ()=>{
@@ -124,10 +108,6 @@ const path = [
 let enemies, towers, wave, money, crystalHP, selectedTower;
 let laserGraphics, moneyText, waveText, selectText, hpText, towerCountText;
 
-SoloScene.prototype.preload = function(){
-  loadSounds(this);
-};
-
 SoloScene.prototype.create = function(){
 
   enemies = [];
@@ -139,8 +119,9 @@ SoloScene.prototype.create = function(){
 
   drawPath(this);
 
-  this.mapMusic = this.sound.add("mapMusic",{loop:true,volume:0.4});
+  this.mapMusic = this.sound.add("mapMusic",{loop:true,volume:0.3});
   this.mapMusic.play();
+
   this.sound.play("roundStart");
 
   laserGraphics = this.add.graphics();
@@ -173,7 +154,7 @@ function spawnWave(scene){
   const isBossWave = wave % 5 === 0;
 
   if(isBossWave){
-    scene.sound.play("bossTheme",{volume:0.6});
+    scene.sound.play("bossTheme",{volume:0.5});
   }
 
   for(let i=0;i<5+wave;i++){
@@ -219,6 +200,7 @@ function tryPlaceTower(scene,x,y){
   if(towers.length >= MAX_TOWERS) return;
   const tData = SHAPES[selectedTower];
   if(money < tData.cost) return;
+
   money -= tData.cost;
   moneyText.setText("Money: "+money);
   addTower(scene,x,y,selectedTower);
@@ -245,7 +227,7 @@ function updateTowerDamage(scene,time){
       if(!e.alive) return;
       const dx=e.x-t.x, dy=e.y-t.y;
       if(dx*dx+dy*dy<=t.range*t.range){
-        scene.sound.play("towerAttack",{volume:0.2});
+        scene.sound.play("towerAttack",{volume:0.15});
         damageEnemy(scene,e,t.dmg);
       }
     });
