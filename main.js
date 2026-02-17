@@ -50,11 +50,27 @@ function tone(scene, freq = 440, duration = 100, volume = 0.2){
 
 /* ========== BACKGROUND MUSIC LOOPS ========== */
 
-let menuMusicLoop;
-let gameMusicLoop;
+let menuMusicLoop = null;
+let gameMusicLoop = null;
+
+function stopMenuMusic(){
+  if(menuMusicLoop){
+    menuMusicLoop.remove();
+    menuMusicLoop = null;
+  }
+}
+
+function stopGameMusic(){
+  if(gameMusicLoop){
+    gameMusicLoop.remove();
+    gameMusicLoop = null;
+  }
+}
 
 function startMenuMusic(scene){
   stopGameMusic();
+  stopMenuMusic();
+
   menuMusicLoop = scene.time.addEvent({
     delay: 900,
     loop: true,
@@ -62,21 +78,15 @@ function startMenuMusic(scene){
   });
 }
 
-function stopMenuMusic(){
-  if(menuMusicLoop) menuMusicLoop.remove();
-}
-
 function startGameMusic(scene){
   stopMenuMusic();
+  stopGameMusic();
+
   gameMusicLoop = scene.time.addEvent({
     delay: 700,
     loop: true,
     callback: () => tone(scene, 140, 300, 0.05)
   });
-}
-
-function stopGameMusic(){
-  if(gameMusicLoop) gameMusicLoop.remove();
 }
 
 /* ================= MENU SCENE ================= */
@@ -124,7 +134,6 @@ MenuScene.prototype.create = function(){
 
   playBtn.on("pointerdown", ()=>{
     tone(this, 700, 120);
-    stopMenuMusic();
     this.cameras.main.fadeOut(400);
     this.time.delayedCall(400,()=>this.scene.start("SoloScene"));
   });
@@ -209,20 +218,9 @@ SoloScene.prototype.create = function(){
 
   this.input.on("pointerdown",p=>tryPlaceTower(this,p.x,p.y));
 
-  this.input.keyboard.on("keydown-ONE",()=>{
-    tone(this,600,80);
-    changeSelection("circle");
-  });
-
-  this.input.keyboard.on("keydown-TWO",()=>{
-    tone(this,500,80);
-    changeSelection("square");
-  });
-
-  this.input.keyboard.on("keydown-THREE",()=>{
-    tone(this,400,80);
-    changeSelection("triangle");
-  });
+  this.input.keyboard.on("keydown-ONE",()=>{ tone(this,600,80); changeSelection("circle"); });
+  this.input.keyboard.on("keydown-TWO",()=>{ tone(this,500,80); changeSelection("square"); });
+  this.input.keyboard.on("keydown-THREE",()=>{ tone(this,400,80); changeSelection("triangle"); });
 
   spawnWave(this);
   this.time.addEvent({delay:7000,loop:true,callback:()=>spawnWave(this)});
@@ -236,7 +234,7 @@ SoloScene.prototype.update = function(time){
 /* ================= GAME LOGIC ================= */
 
 function spawnWave(scene){
-  tone(scene,300,200); // wave start sound
+  tone(scene,300,200);
 
   for(let i=0;i<5+wave;i++){
     const e={x:path[0].x,y:path[0].y,hp:12+wave*3,speed:0.8,pathIndex:0,alive:true};
@@ -312,7 +310,7 @@ function updateTowerDamage(scene,time){
         laserGraphics.lineTo(e.x,e.y);
         laserGraphics.strokePath();
 
-        tone(scene,800,50); // tower attack sound
+        tone(scene,800,50);
         damageEnemy(e,t.dmg);
       }
     });
@@ -336,7 +334,7 @@ function damageCrystal(scene,amount){
   hpText.setText("Crystal HP: "+crystalHP);
   if(crystalHP<=0){
     stopGameMusic();
-    tone(scene,120,400,0.4); // lose sound
+    tone(scene,120,400,0.4);
     scene.scene.start("MenuScene");
   }
 }
