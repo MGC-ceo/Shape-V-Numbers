@@ -36,23 +36,19 @@ MenuScene.prototype.create = function(){
   playerLevel = loadProgress();
 
   this.add.text(400,80,"SHAPE DEFENSE",{fontSize:"42px",color:"#ffffff"}).setOrigin(0.5);
-  this.add.text(400,130,"LEVEL: "+playerLevel,{fontSize:"20px",color:"#00ffcc"}).setOrigin(0.5);
 
-  const playBtn = this.add.text(400,250,"PLAY",{fontSize:"36px",color:"#ffffff"})
-    .setOrigin(0.5)
-    .setInteractive();
+  this.add.text(400,130,"LEVEL: "+playerLevel,
+    {fontSize:"20px",color:"#00ffcc"}).setOrigin(0.5);
 
-  playBtn.on("pointerdown", ()=>{
-    this.scene.start("SoloScene");
-  });
+  const playBtn = this.add.text(400,250,"PLAY",
+    {fontSize:"36px",color:"#ffffff"}).setOrigin(0.5).setInteractive();
 
-  const partyBtn = this.add.text(400,380,"PARTY",{fontSize:"28px",color:"#ffffff"})
-    .setOrigin(0.5)
-    .setInteractive();
+  playBtn.on("pointerdown", ()=>this.scene.start("SoloScene"));
 
-  partyBtn.on("pointerdown", ()=>{
-    this.scene.start("PartyScene");
-  });
+  const partyBtn = this.add.text(400,380,"PARTY",
+    {fontSize:"28px",color:"#ffffff"}).setOrigin(0.5).setInteractive();
+
+  partyBtn.on("pointerdown", ()=>this.scene.start("PartyScene"));
 };
 
 /* ================= PARTY SCENE ================= */
@@ -62,7 +58,8 @@ PartyScene.prototype = Object.create(Phaser.Scene.prototype);
 
 PartyScene.prototype.create = function(){
 
-  this.add.text(400,80,"SHAPE STATS",{fontSize:"36px",color:"#ffffff"}).setOrigin(0.5);
+  this.add.text(400,80,"SHAPE STATS",
+    {fontSize:"36px",color:"#ffffff"}).setOrigin(0.5);
 
   const stats = [
     "CIRCLE\nDamage: Medium\nRange: Medium\nAttack Speed: Normal",
@@ -71,16 +68,15 @@ PartyScene.prototype.create = function(){
   ];
 
   stats.forEach((s,i)=>{
-    this.add.text(400,180+i*120,s,{fontSize:"18px",color:"#00ffcc",align:"center"}).setOrigin(0.5);
+    this.add.text(400,200 + i*110, s,
+      {fontSize:"18px",color:"#00ffcc",align:"center"})
+      .setOrigin(0.5);
   });
 
-  const backBtn = this.add.text(400,540,"BACK",{fontSize:"24px",color:"#ffffff"})
-    .setOrigin(0.5)
-    .setInteractive();
+  const backBtn = this.add.text(400,540,"BACK",
+    {fontSize:"24px",color:"#ffffff"}).setOrigin(0.5).setInteractive();
 
-  backBtn.on("pointerdown", ()=>{
-    this.scene.start("MenuScene");
-  });
+  backBtn.on("pointerdown", ()=>this.scene.start("MenuScene"));
 };
 
 /* ================= SOLO GAME SCENE ================= */
@@ -141,7 +137,7 @@ SoloScene.prototype.update = function(time){
   drawLasers();
 };
 
-/* ================= CORE GAME LOGIC ================= */
+/* ================= CORE LOGIC ================= */
 
 function spawnWave(scene){
   const isBossWave = wave % 5 === 0;
@@ -204,35 +200,25 @@ function tryPlaceTower(scene,x,y){
 function addTower(scene,x,y,type){
   const s = SHAPES[type];
 
-  towers.push({
-    x,
-    y,
-    range: s.range,
-    dmg: s.dmg,
-    rate: s.rate,
-    nextTick: 0,
-    type
-  });
+  towers.push({x,y,range:s.range,dmg:s.dmg,rate:s.rate,nextTick:0,type});
 
   if(type === "circle"){
-    scene.add.circle(x, y, 14, s.color).setStrokeStyle(2, 0xffffff);
+    scene.add.circle(x, y, 14, s.color).setStrokeStyle(2,0xffffff);
   }
 
   if(type === "square"){
-    scene.add.rectangle(x, y, 28, 28, s.color).setStrokeStyle(2, 0xffffff);
+    scene.add.rectangle(x, y, 28, 28, s.color).setStrokeStyle(2,0xffffff);
   }
 
   if(type === "triangle"){
-    scene.add.polygon(x, y, [
-      0,-16,
-      -14,12,
-      14,12
-    ], s.color).setStrokeStyle(2, 0xffffff);
+    scene.add.polygon(x, y,
+      [-14,12, 14,12, 0,-16], s.color
+    ).setStrokeStyle(2,0xffffff);
   }
 }
 
 function changeSelection(type){
-  selectedTower=type;
+  selectedTower = type;
   selectText.setText("Selected: "+type.toUpperCase());
 }
 
@@ -258,7 +244,7 @@ function drawLasers(){
 }
 
 function damageEnemy(e,dmg){
-  e.hp-=dmg;
+  e.hp -= dmg;
   e.text.setText(Math.floor(e.hp));
 
   if(e.hp<=0){
@@ -274,7 +260,7 @@ function damageCrystal(scene,amount){
   crystalHP -= amount;
   hpText.setText("Crystal HP: " + crystalHP);
 
-  if(crystalHP <= 0){
+  if(crystalHP<=0){
     const reachedLevel = wave - 1;
     if(reachedLevel > playerLevel){
       playerLevel = reachedLevel;
