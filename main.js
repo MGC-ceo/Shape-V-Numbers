@@ -110,7 +110,7 @@ MenuScene.prototype.create = function(){
   this.cameras.main.fadeIn(600);
   startMenuMusic(this);
 
-  /* ===== FIXED PARTICLE TEXTURE ===== */
+  // Create particle texture once
   if(!this.textures.exists("particle")){
     const g = this.add.graphics();
     g.fillStyle(0xffffff);
@@ -119,6 +119,7 @@ MenuScene.prototype.create = function(){
     g.destroy();
   }
 
+  // Background particles
   this.add.particles(0, 0, "particle", {
     x: { min: 0, max: w },
     y: h,
@@ -162,13 +163,36 @@ MenuScene.prototype.create = function(){
   });
 };
 
+/* ================= PARTY SCENE ================= */
+
+function PartyScene(){ Phaser.Scene.call(this,{key:"PartyScene"}); }
+PartyScene.prototype = Object.create(Phaser.Scene.prototype);
+
+PartyScene.prototype.create = function(){
+  this.cameras.main.fadeIn(400);
+
+  this.add.text(400,80,"SHAPE STATS",{fontSize:"36px",color:"#ffffff"}).setOrigin(0.5);
+
+  const stats = [
+    "CIRCLE\nDamage: Medium\nRange: Medium\nAttack Speed: Normal",
+    "SQUARE\nDamage: High\nRange: Large\nAttack Speed: Slow",
+    "TRIANGLE\nDamage: Medium\nRange: Short\nAttack Speed: Fast"
+  ];
+
+  stats.forEach((s,i)=>{
+    this.add.text(400,180+i*120,s,{fontSize:"18px",color:"#00ffcc",align:"center"}).setOrigin(0.5);
+  });
+
+  const backBtn = this.add.text(400,540,"BACK",{fontSize:"24px",color:"#ffffff"}).setOrigin(0.5).setInteractive();
+  backBtn.on("pointerdown", ()=> this.scene.start("MenuScene"));
+};
+
 /* ================= SOLO GAME ================= */
 
 function SoloScene(){ Phaser.Scene.call(this,{key:"SoloScene"}); }
 SoloScene.prototype = Object.create(Phaser.Scene.prototype);
 
 const MAX_TOWERS = 25;
-let paused = false;
 
 const SHAPES = {
   circle:{range:130,dmg:2,rate:600,cost:40,color:0x00ffcc},
@@ -182,6 +206,7 @@ const path = [
 
 let enemies,towers,wave,money,crystalHP,selectedTower;
 let laserGraphics,moneyText,waveText,selectText,hpText,towerCountText,pauseText;
+let paused=false;
 
 SoloScene.prototype.create = function(){
 
@@ -252,8 +277,53 @@ function spawnWave(scene){
   waveText.setText("Wave: "+wave);
 }
 
-function updateTowerDamage(scene,time){
+function moveEnemies(scene){
+  enemies.forEach(e=>{
+    if(!e.alive)return;
+    const next=path[e.pathIndex+1];
+    if(!next){
+      damageCrystal(scene,1);
+      e.alive=false;
+      e.body.destroy();
+      e.text.destroy();
+      return;
+    }
+    const dx=next.x-e.x,dy=next.y-e.y;
+    const d=Math.hypot(dx,dy);
+    e.x+=(dx/d)*e.speed;
+    e.y+=(dy/d)*e.speed;
+    e.body.setPosition(e.x,e.y);
+    e.text.setPosition(e.x-10,e.y-12);
+    if(d<4)e.pathIndex++;
+  });
+}
 
+function tryPlaceTower(scene,x,y){
+  if(towers.length>=MAX_TOWERS)return;
+  const tData=SHAPES[selectedTower];
+  if(money<tData.cost)return;
+
+  money-=tData.cost;
+  moneyText.setText("Money: "+money);
+
+  towers.push({x,y,...tData,nextTick:0,type:selectedTower});
+
+  if(selectedTower==="circle")
+    scene.add.circle(x,y,14,tData.color).setStrokeStyle(2,0xffffff);
+  if(selectedTower==="square")
+    scene.add.rectangle(x,y,28,28,tData.color).setStrokeStyle(2,0xffffff);
+  if(selectedTower==="triangle")
+    scene.add.polygon(x,y,[0,-16,-14,12,14,12],tData.color).setStrokeStyle(2,0xffffff);
+
+  towerCountText.setText("Towers: "+towers.length+" / "+MAX_TOWERS);
+}
+
+function changeSelection(type){
+  selectedTower=type;
+  selectText.setText("Selected: "+type.toUpperCase());
+}
+
+function updateTowerDamage(scene,time){
   laserGraphics.clear();
 
   towers.forEach(t=>{
@@ -263,7 +333,6 @@ function updateTowerDamage(scene,time){
     enemies.forEach(e=>{
       if(!e.alive)return;
       const dx=e.x-t.x,dy=e.y-t.y;
-
       if(dx*dx+dy*dy<=t.range*t.range){
 
         laserGraphics.lineStyle(4,0xffffff,0.2);
@@ -278,6 +347,18 @@ function updateTowerDamage(scene,time){
   });
 }
 
+function damageEnemy(e,dmg){
+  e.hp-=dmg;
+  e.text.setText(Math.floor(e.hp));
+  if(e.hp<=0){
+    e.alive=false;
+    e.body.destroy();
+    e.text.destroy();
+    money+=15;
+    moneyText.setText("Money: "+money);
+  }
+}
+
 function damageCrystal(scene,amount){
   crystalHP-=amount;
   hpText.setText("Crystal HP: "+crystalHP);
@@ -286,4 +367,13 @@ function damageCrystal(scene,amount){
     stopMusic();
     scene.scene.start("MenuScene");
   }
+}
+
+function drawPath(scene){
+  const g=scene.add.graphics();
+  g.lineStyle(20,0x444444,1);
+  g.beginPath();
+  g.moveTo(path[0].x,path[0].y);
+  for(let i=1;i<path.length;i++)g.lineTo(path[i].x,path[i].y);
+  g.strokePath();
 }
