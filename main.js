@@ -11,8 +11,6 @@ const config = {
   scene: [MenuScene, SoloScene, PartyScene]
 };
 
-new Phaser.Game(config);
-
 /* ================= SAVE SYSTEM ================= */
 
 function saveProgress(level){
@@ -377,3 +375,4 @@ function drawPath(scene){
   for(let i=1;i<path.length;i++)g.lineTo(path[i].x,path[i].y);
   g.strokePath();
 }
+new Phaser.Game(config);
