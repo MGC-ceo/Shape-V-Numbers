@@ -35,18 +35,40 @@ MenuScene.prototype.create = function(){
 
   playerLevel = loadProgress();
 
-  this.add.text(400,80,"SHAPE DEFENSE",{fontSize:"42px",color:"#ffffff"}).setOrigin(0.5);
+  const centerX = this.cameras.main.width / 2;
+  const centerY = this.cameras.main.height / 2;
 
-  this.add.text(400,130,"LEVEL: "+playerLevel,
-    {fontSize:"20px",color:"#00ffcc"}).setOrigin(0.5);
+  // Title
+  this.add.text(centerX, centerY - 160, "SHAPE DEFENSE",
+    {fontSize:"42px",color:"#ffffff"})
+    .setOrigin(0.5);
 
-  const playBtn = this.add.text(400,250,"PLAY",
-    {fontSize:"36px",color:"#ffffff"}).setOrigin(0.5).setInteractive();
+  // Level
+  this.add.text(centerX, centerY - 110, "LEVEL: " + playerLevel,
+    {fontSize:"20px",color:"#00ffcc"})
+    .setOrigin(0.5);
+
+  // Play
+  const playBtn = this.add.text(centerX, centerY,
+    "PLAY",
+    {fontSize:"36px",color:"#ffffff"})
+    .setOrigin(0.5)
+    .setInteractive();
 
   playBtn.on("pointerdown", ()=>this.scene.start("SoloScene"));
 
-  const partyBtn = this.add.text(400,380,"PARTY",
-    {fontSize:"28px",color:"#ffffff"}).setOrigin(0.5).setInteractive();
+  // More Content
+  this.add.text(centerX, centerY + 50,
+    "More Content Soon",
+    {fontSize:"16px",color:"#888"})
+    .setOrigin(0.5);
+
+  // Party
+  const partyBtn = this.add.text(centerX, centerY + 120,
+    "PARTY",
+    {fontSize:"28px",color:"#ffffff"})
+    .setOrigin(0.5)
+    .setInteractive();
 
   partyBtn.on("pointerdown", ()=>this.scene.start("PartyScene"));
 };
