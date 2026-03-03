@@ -163,6 +163,8 @@ this.add.text(centerX, 40, "Player: " + username, {
   this.scene.start("MenuScene");
 });
 
+};
+
 function MenuScene(){ Phaser.Scene.call(this,{key:"MenuScene"}); }
 MenuScene.prototype = Object.create(Phaser.Scene.prototype);
 
@@ -324,8 +326,11 @@ SoloScene.prototype.update=function(time){
 
 function spawnWave(scene){
 
- const isBoss = wave % 5 === 0;
+  wave++;
+  waveText.setText("Wave: " + wave);
 
+  const isBoss = wave % 5 === 0;
+  
 if(isBoss){
   startBossMusic(scene);
 } else if(wave % 5 === 1){
