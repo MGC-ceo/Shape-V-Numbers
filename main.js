@@ -79,8 +79,77 @@ function startGameMusic(scene){
     callback: ()=> tone(scene, 260, 200, 0.05, "triangle")
   }));
 }
+function startBossMusic(scene){
+  stopMusic();
 
+  // Deep dramatic bass pulse
+  musicEvents.push(scene.time.addEvent({
+    delay: 400,
+    loop: true,
+    callback: ()=> tone(scene, 80, 350, 0.15, "sawtooth")
+  }));
+
+  // Sharp high tension tone
+  musicEvents.push(scene.time.addEvent({
+    delay: 800,
+    loop: true,
+    callback: ()=> tone(scene, 500, 200, 0.08, "square")
+  }));
+
+  // Horror ambient layer
+  musicEvents.push(scene.time.addEvent({
+    delay: 1200,
+    loop: true,
+    callback: ()=> tone(scene, 200, 600, 0.05, "triangle")
+  }));
+}
 /* ================= MENU SCENE ================= */
+
+function LoginScene(){ Phaser.Scene.call(this,{key:"LoginScene"}); }
+LoginScene.prototype = Object.create(Phaser.Scene.prototype);
+
+LoginScene.prototype.create = function(){
+
+  const centerX = 400;
+  const centerY = 300;
+
+  this.add.text(centerX, 150, "LOGIN", {fontSize:"42px",color:"#ffffff"}).setOrigin(0.5);
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.placeholder = "Enter Username";
+  input.style.position = "absolute";
+  input.style.top = "50%";
+  input.style.left = "50%";
+  input.style.transform = "translate(-50%, -50%)";
+  input.style.padding = "10px";
+  input.style.fontSize = "18px";
+
+  document.body.appendChild(input);
+
+  const loginBtn = this.add.text(centerX, 360, "START", {
+    fontSize:"28px",
+    color:"#00ffcc"
+  }).setOrigin(0.5).setInteractive();
+
+  loginBtn.on("pointerdown", ()=>{
+
+    const username = localStorage.getItem("shapeDefenseUser") || "Guest";
+
+this.add.text(centerX, 30, "Player: " + username, {
+  fontSize:"18px",
+  color:"#00ffcc"
+}).setOrigin(0.5);
+    
+    const username = input.value.trim();
+    if(username.length < 3) return;
+
+    localStorage.setItem("shapeDefenseUser", username);
+
+    document.body.removeChild(input);
+    this.scene.start("MenuScene");
+  });
+};
 
 function MenuScene(){ Phaser.Scene.call(this,{key:"MenuScene"}); }
 MenuScene.prototype = Object.create(Phaser.Scene.prototype);
@@ -95,6 +164,19 @@ MenuScene.prototype.create = function(){
   this.cameras.main.fadeIn(600);
   startMenuMusic(this);
 
+  function saveHighScore(score){
+  const user = localStorage.getItem("shapeDefenseUser") || "Guest";
+
+  const data = JSON.parse(localStorage.getItem("shapeDefenseScores") || "[]");
+
+  data.push({
+    user: user,
+    score: score,
+    date: Date.now()
+  });
+
+  localStorage.setItem("shapeDefenseScores", JSON.stringify(data));
+}
   // Create particle texture once
   if(!this.textures.exists("particle")){
     const g = this.add.graphics();
@@ -243,15 +325,30 @@ SoloScene.prototype.update=function(time){
 
 function spawnWave(scene){
 
-  const isBoss = wave % 5 === 0;
+ const isBoss = wave % 5 === 0;
+
+if(isBoss){
+  startBossMusic(scene);
+} else {
+  startGameMusic(scene);
+}
 
   for(let i=0;i<5+wave;i++){
 
-    const hp = isBoss ? 100 : 12+wave*3;
-    const size = isBoss ? 24 : 14;
-    const color = isBoss ? 0xff0000 : 0xff5555;
+const hp = isBoss ? 150 + wave * 10 : 12 + wave * 3;
+const size = isBoss ? 28 : 14;
+const color = isBoss ? 0xff0000 : 0xff5555;
+const speed = isBoss ? 0.4 : 0.8;
 
-    const e={x:path[0].x,y:path[0].y,hp:hp,speed:isBoss?0.5:0.8,pathIndex:0,alive:true};
+   const e = {
+  x: path[0].x,
+  y: path[0].y,
+  hp: hp,
+  speed: speed,
+  pathIndex: 0,
+  alive: true,
+  isBoss: isBoss
+};
 
     e.body=scene.add.circle(e.x,e.y,size,color);
     e.text=scene.add.text(e.x-10,e.y-12,e.hp,{color:"#fff"});
@@ -348,10 +445,11 @@ function damageCrystal(scene,amount){
   crystalHP-=amount;
   hpText.setText("Crystal HP: "+crystalHP);
   scene.cameras.main.shake(200,0.01);
-  if(crystalHP<=0){
-    stopMusic();
-    scene.scene.start("MenuScene");
-  }
+if(crystalHP<=0){
+  stopMusic();
+  saveHighScore(wave);
+  scene.scene.start("MenuScene");
+ }
 }
 
 function drawPath(scene){
@@ -374,7 +472,7 @@ const config = {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH
   },
-  scene: [MenuScene, SoloScene, PartyScene]
+scene: [LoginScene, MenuScene, SoloScene, PartyScene]
 };
 
 new Phaser.Game(config);
