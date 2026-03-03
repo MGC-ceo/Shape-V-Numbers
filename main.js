@@ -61,72 +61,67 @@ function tone(scene, freq = 440, duration = 150, volume = 0.3, type="sine"){
 let musicEvents = [];
 
 function stopMusic(){
-  musicEvents.forEach(e=>e.remove());
+  musicEvents.forEach(e => e.remove());
   musicEvents = [];
 }
 
 function startMenuMusic(scene){
-    if(currentMusic === "menu") return;
-    currentMusic = "menu";
-    stopMusic();
-  
-function startGameMusic(scene){
-    if(currentMusic === "game") return;
-    currentMusic = "game";
-    stopMusic();
+  if(currentMusic === "menu") return;
+  currentMusic = "menu";
+  stopMusic();
 
   musicEvents.push(scene.time.addEvent({
     delay: 800,
     loop: true,
-    callback: ()=> tone(scene, 180, 400, 0.08, "triangle")
+    callback: () => tone(scene, 180, 400, 0.08, "triangle")
   }));
 
   musicEvents.push(scene.time.addEvent({
     delay: 1600,
     loop: true,
-    callback: ()=> tone(scene, 440, 300, 0.05, "sine")
+    callback: () => tone(scene, 440, 300, 0.05, "sine")
   }));
 }
 
 function startGameMusic(scene){
+  if(currentMusic === "game") return;
+  currentMusic = "game";
   stopMusic();
 
   musicEvents.push(scene.time.addEvent({
     delay: 600,
     loop: true,
-    callback: ()=> tone(scene, 120, 300, 0.09, "square")
+    callback: () => tone(scene, 120, 300, 0.09, "square")
   }));
 
   musicEvents.push(scene.time.addEvent({
     delay: 900,
     loop: true,
-    callback: ()=> tone(scene, 260, 200, 0.05, "triangle")
+    callback: () => tone(scene, 260, 200, 0.05, "triangle")
   }));
 }
-function startBossMusic(scene){
-    if(currentMusic === "boss") return;
-    currentMusic = "boss";
-    stopMusic();
 
-  // Deep dramatic bass pulse
+function startBossMusic(scene){
+  if(currentMusic === "boss") return;
+  currentMusic = "boss";
+  stopMusic();
+
   musicEvents.push(scene.time.addEvent({
     delay: 400,
     loop: true,
-    callback: ()=> tone(scene, 80, 350, 0.15, "sawtooth")
+    callback: () => tone(scene, 80, 350, 0.15, "sawtooth")
   }));
 
-  // Sharp high tension tone
   musicEvents.push(scene.time.addEvent({
     delay: 800,
     loop: true,
-    callback: ()=> tone(scene, 500, 200, 0.08, "square")
+    callback: () => tone(scene, 500, 200, 0.08, "square")
   }));
 
-  // Horror ambient layer
   musicEvents.push(scene.time.addEvent({
     delay: 1200,
     loop: true,
-    callback: ()=> tone(scene, 200, 600, 0.05, "triangle")
+    callback: () => tone(scene, 200, 600, 0.05, "triangle")
   }));
 }
 /* ================= MENU SCENE ================= */
