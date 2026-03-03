@@ -28,11 +28,11 @@ let playerLevel = loadProgress();
 
 /* ================= GLOBAL AUDIO ================= */
 
-let masterVolume = 0.3;
+let masterVolume = 0.4;
 let isMuted = false;
 let bossAlive = false;
 
-function tone(scene, freq = 440, duration = 150, volume = 0.2, type="sine"){
+function tone(scene, freq = 440, duration = 150, volume = 0.3, type="sine"){
   if(isMuted) return;
 
   const ctx = scene.sound.context;
@@ -172,6 +172,11 @@ this.add.text(centerX, 40, "Player: " + username, {
 function MenuScene(){ Phaser.Scene.call(this,{key:"MenuScene"}); }
 MenuScene.prototype = Object.create(Phaser.Scene.prototype);
 
+this.scale.on('resize', (gameSize) => {
+  const { width, height } = gameSize;
+  this.cameras.resize(width, height);
+});
+
 MenuScene.prototype.create = function(){
 
   const w = this.cameras.main.width;
@@ -264,6 +269,11 @@ PartyScene.prototype.create = function(){
 function SoloScene(){ Phaser.Scene.call(this,{key:"SoloScene"}); }
 SoloScene.prototype = Object.create(Phaser.Scene.prototype);
 
+this.scale.on('resize', (gameSize) => {
+  const { width, height } = gameSize;
+  this.cameras.resize(width, height);
+});
+
 const MAX_TOWERS = 25;
 
 const SHAPES = {
@@ -336,7 +346,14 @@ function spawnWave(scene){
   bossAlive = true;
   startBossMusic(scene);
 }
-  for(let i = 0; i < 5 + wave; i++){
+
+  let baseCount = 5 + wave;
+
+if(wave > 10){
+  baseCount += Math.floor((wave - 10) / 2); 
+}
+
+for(let i = 0; i < baseCount; i++){
 
     const hp = isBoss ? 150 + wave * 10 : 12 + wave * 3;
     const size = isBoss ? 28 : 14;
@@ -477,10 +494,10 @@ const config = {
   height: 600,
   backgroundColor: "#111",
   parent: "game-container",
-  scale: {
-    mode: Phaser.Scale.FIT,
-    autoCenter: Phaser.Scale.CENTER_BOTH
-  },
+ scale: {
+  mode: Phaser.Scale.RESIZE,
+  autoCenter: Phaser.Scale.CENTER_BOTH
+},
 scene: [LoginScene, MenuScene, SoloScene, PartyScene]
 };
 
