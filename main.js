@@ -1,4 +1,17 @@
 /* ================= SAVE SYSTEM ================= */
+function saveHighScore(score){
+  const user = localStorage.getItem("shapeDefenseUser") || "Guest";
+
+  const data = JSON.parse(localStorage.getItem("shapeDefenseScores") || "[]");
+
+  data.push({
+    user: user,
+    score: score,
+    date: Date.now()
+  });
+
+  localStorage.setItem("shapeDefenseScores", JSON.stringify(data));
+}
 
 function saveProgress(level){
   localStorage.setItem("shapeDefenseLevel", level);
@@ -132,24 +145,23 @@ LoginScene.prototype.create = function(){
     color:"#00ffcc"
   }).setOrigin(0.5).setInteractive();
 
-  loginBtn.on("pointerdown", ()=>{
+  const username = localStorage.getItem("shapeDefenseUser") || "Guest";
 
-    const username = localStorage.getItem("shapeDefenseUser") || "Guest";
-
-this.add.text(centerX, 30, "Player: " + username, {
+this.add.text(centerX, 40, "Player: " + username, {
   fontSize:"18px",
   color:"#00ffcc"
 }).setOrigin(0.5);
-    
-    const username = input.value.trim();
-    if(username.length < 3) return;
 
-    localStorage.setItem("shapeDefenseUser", username);
+  loginBtn.on("pointerdown", ()=>{
 
-    document.body.removeChild(input);
-    this.scene.start("MenuScene");
-  });
-};
+  const username = input.value.trim();
+  if(username.length < 3) return;
+
+  localStorage.setItem("shapeDefenseUser", username);
+
+  document.body.removeChild(input);
+  this.scene.start("MenuScene");
+});
 
 function MenuScene(){ Phaser.Scene.call(this,{key:"MenuScene"}); }
 MenuScene.prototype = Object.create(Phaser.Scene.prototype);
@@ -164,19 +176,6 @@ MenuScene.prototype.create = function(){
   this.cameras.main.fadeIn(600);
   startMenuMusic(this);
 
-  function saveHighScore(score){
-  const user = localStorage.getItem("shapeDefenseUser") || "Guest";
-
-  const data = JSON.parse(localStorage.getItem("shapeDefenseScores") || "[]");
-
-  data.push({
-    user: user,
-    score: score,
-    date: Date.now()
-  });
-
-  localStorage.setItem("shapeDefenseScores", JSON.stringify(data));
-}
   // Create particle texture once
   if(!this.textures.exists("particle")){
     const g = this.add.graphics();
@@ -329,7 +328,7 @@ function spawnWave(scene){
 
 if(isBoss){
   startBossMusic(scene);
-} else {
+} else if(wave % 5 === 1){
   startGameMusic(scene);
 }
 
