@@ -177,20 +177,25 @@ LoginScene.prototype.create = function(){
   }
 
   // Keyboard input
-  this.input.keyboard.on("keydown", (event) => {
+this.input.keyboard.on("keydown", (event) => {
 
-    if(event.key === "Backspace"){
-      username = username.slice(0, -1);
-    }
-    else if(event.key === "Enter"){
-      attemptLogin();
-    }
-    else if(username.length < maxLength && event.key.length === 1){
-      username += event.key;
-    }
+  if(event.key === "Backspace"){
+    username = username.slice(0, -1);
+  }
+  else if(event.key === "Enter"){
+    attemptLogin();
+  }
+  else if(username.length < maxLength && event.key.length === 1){
+    username += event.key;
+  }
 
-    inputText.setText(username);
-  });
+  inputText.setText(username);
+
+  // 🔹 Only clear error if text actually changed
+  if(event.key.length === 1 || event.key === "Backspace"){
+    errorText.setText("");
+  }
+});
 
   const attemptLogin = () => {
     if(username.trim().length < 3){
