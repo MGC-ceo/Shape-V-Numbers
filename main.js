@@ -172,13 +172,13 @@ this.add.text(centerX, 40, "Player: " + username, {
 function MenuScene(){ Phaser.Scene.call(this,{key:"MenuScene"}); }
 MenuScene.prototype = Object.create(Phaser.Scene.prototype);
 
-this.scale.on('resize', (gameSize) => {
+MenuScene.prototype.create = function(){
+
+  this.scale.on('resize', (gameSize) => {
   const { width, height } = gameSize;
   this.cameras.resize(width, height);
 });
-
-MenuScene.prototype.create = function(){
-
+  
   const w = this.cameras.main.width;
   const h = this.cameras.main.height;
   const centerX = w/2;
@@ -269,11 +269,6 @@ PartyScene.prototype.create = function(){
 function SoloScene(){ Phaser.Scene.call(this,{key:"SoloScene"}); }
 SoloScene.prototype = Object.create(Phaser.Scene.prototype);
 
-this.scale.on('resize', (gameSize) => {
-  const { width, height } = gameSize;
-  this.cameras.resize(width, height);
-});
-
 const MAX_TOWERS = 25;
 
 const SHAPES = {
@@ -292,6 +287,11 @@ let paused=false;
 
 SoloScene.prototype.create = function(){
 
+  this.scale.on('resize', (gameSize) => {
+  const { width, height } = gameSize;
+  this.cameras.resize(width, height);
+});
+  
   this.cameras.main.fadeIn(400);
   startGameMusic(this);
 
@@ -340,12 +340,16 @@ SoloScene.prototype.update=function(time){
 
 function spawnWave(scene){
 
+  if(!bossAlive){
+    startGameMusic(scene);
+  }
+
   const isBoss = wave % 5 === 0;
 
- if(isBoss){
-  bossAlive = true;
-  startBossMusic(scene);
-}
+  if(isBoss){
+    bossAlive = true;
+    startBossMusic(scene);
+  }
 
   let baseCount = 5 + wave;
 
