@@ -14,11 +14,13 @@ function saveHighScore(score){
 }
 
 function saveProgress(level){
-  localStorage.setItem("shapeDefenseLevel", level);
+  const user = localStorage.getItem("shapeDefenseUser") || "Guest";
+  localStorage.setItem("shapeDefenseLevel_" + user, level);
 }
 
 function loadProgress(){
-  const saved = localStorage.getItem("shapeDefenseLevel");
+  const user = localStorage.getItem("shapeDefenseUser") || "Guest";
+  const saved = localStorage.getItem("shapeDefenseLevel_" + user);
   return saved ? parseInt(saved) : 1;
 }
 
@@ -28,6 +30,7 @@ let playerLevel = loadProgress();
 
 let masterVolume = 0.3;
 let isMuted = false;
+let bossAlive = false;
 
 function tone(scene, freq = 440, duration = 150, volume = 0.2, type="sine"){
   if(isMuted) return;
@@ -329,12 +332,10 @@ function spawnWave(scene){
 
   const isBoss = wave % 5 === 0;
 
-  if(isBoss){
-    startBossMusic(scene);
-  } else if(wave % 5 === 1 && wave !== 1){
-    startGameMusic(scene);
-  }
-
+ if(isBoss){
+  bossAlive = true;
+  startBossMusic(scene);
+}
   for(let i = 0; i < 5 + wave; i++){
 
     const hp = isBoss ? 150 + wave * 10 : 12 + wave * 3;
@@ -359,6 +360,7 @@ function spawnWave(scene){
   }
 
   waveText.setText("Wave: " + wave);
+  saveProgress(wave);
   wave++;
 }
 
@@ -426,16 +428,20 @@ function updateTowerDamage(scene,time){
         laserGraphics.lineStyle(2,0xffffff,0.9);
         laserGraphics.strokeLineShape(new Phaser.Geom.Line(t.x,t.y,e.x,e.y));
 
-        damageEnemy(e,t.dmg);
+        damageEnemy(scene, e, t.dmg);
       }
     });
   });
 }
 
-function damageEnemy(e,dmg){
+function damageEnemy(scene, e, dmg){
   e.hp-=dmg;
   e.text.setText(Math.floor(e.hp));
-  if(e.hp<=0){
+ if(e.hp<=0){
+  if(e.isBoss){
+    bossAlive = false;
+    startGameMusic(scene);
+  }
     e.alive=false;
     e.body.destroy();
     e.text.destroy();
