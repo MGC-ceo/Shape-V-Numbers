@@ -31,6 +31,7 @@ let playerLevel = loadProgress();
 let masterVolume = 0.4;
 let isMuted = false;
 let bossAlive = false;
+let currentMusic = "menu";
 
 function tone(scene, freq = 440, duration = 150, volume = 0.3, type="sine"){
   if(isMuted) return;
@@ -65,7 +66,14 @@ function stopMusic(){
 }
 
 function startMenuMusic(scene){
-  stopMusic();
+    if(currentMusic === "menu") return;
+    currentMusic = "menu";
+    stopMusic();
+  
+function startGameMusic(scene){
+    if(currentMusic === "game") return;
+    currentMusic = "game";
+    stopMusic();
 
   musicEvents.push(scene.time.addEvent({
     delay: 800,
@@ -96,7 +104,9 @@ function startGameMusic(scene){
   }));
 }
 function startBossMusic(scene){
-  stopMusic();
+    if(currentMusic === "boss") return;
+    currentMusic = "boss";
+    stopMusic();
 
   // Deep dramatic bass pulse
   musicEvents.push(scene.time.addEvent({
@@ -213,7 +223,14 @@ MenuScene.prototype.create = function(){
   const container = this.add.container(centerX, centerY);
 
   const title = this.add.text(0,-150,"SHAPE DEFENSE",{fontSize:"42px",color:"#ffffff"}).setOrigin(0.5);
-  const level = this.add.text(0,-100,"LEVEL: "+playerLevel,{fontSize:"20px",color:"#00ffcc"}).setOrigin(0.5);
+  const currentLevel = loadProgress();
+
+const level = this.add.text(
+    0,
+    -100,
+    "LEVEL: " + currentLevel,
+    {fontSize:"20px",color:"#00ffcc"}
+).setOrigin(0.5);
 
   const playBtn = this.add.text(0,0,"PLAY",{fontSize:"36px",color:"#ffffff"}).setOrigin(0.5).setInteractive();
   const partyBtn = this.add.text(0,100,"PARTY",{fontSize:"28px",color:"#ffffff"}).setOrigin(0.5).setInteractive();
@@ -339,10 +356,6 @@ SoloScene.prototype.update=function(time){
 /* ================= GAME LOGIC ================= */
 
 function spawnWave(scene){
-
-  if(!bossAlive){
-    startGameMusic(scene);
-  }
 
   const isBoss = wave % 5 === 0;
 
