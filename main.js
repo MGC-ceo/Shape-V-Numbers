@@ -131,47 +131,78 @@ LoginScene.prototype = Object.create(Phaser.Scene.prototype);
 
 LoginScene.prototype.create = function(){
 
-  const centerX = 400;
-  const centerY = 300;
+  const w = this.cameras.main.width;
+  const h = this.cameras.main.height;
+  const centerX = w / 2;
+  const centerY = h / 2;
 
-  this.add.text(centerX, 150, "LOGIN", {fontSize:"42px",color:"#ffffff"}).setOrigin(0.5);
+  this.cameras.main.fadeIn(400);
 
-  const input = document.createElement("input");
-  input.type = "text";
-  input.placeholder = "Enter Username";
-  input.style.position = "absolute";
-  input.style.top = "50%";
-  input.style.left = "50%";
-  input.style.transform = "translate(-50%, -50%)";
-  input.style.padding = "10px";
-  input.style.fontSize = "18px";
-  input.value = localStorage.getItem("shapeDefenseUser") || "";
-  
-  document.body.appendChild(input);
+  let username = "";
+  const maxLength = 12;
 
-  const loginBtn = this.add.text(centerX, 360, "START", {
-    fontSize:"28px",
-    color:"#00ffcc"
+  this.add.text(centerX, 120, "LOGIN", {
+    fontSize: "42px",
+    color: "#ffffff"
+  }).setOrigin(0.5);
+
+  this.add.text(centerX, 170, "Enter Username:", {
+    fontSize: "18px",
+    color: "#00ffcc"
+  }).setOrigin(0.5);
+
+  const inputBox = this.add.rectangle(centerX, centerY, 300, 50, 0x000000)
+      .setStrokeStyle(2, 0x00ffcc);
+
+  const inputText = this.add.text(centerX, centerY, "", {
+    fontSize: "22px",
+    color: "#ffffff"
+  }).setOrigin(0.5);
+
+  const errorText = this.add.text(centerX, centerY + 45, "", {
+    fontSize: "16px",
+    color: "#ff4444"
+  }).setOrigin(0.5);
+
+  const startBtn = this.add.text(centerX, centerY + 100, "START", {
+    fontSize: "28px",
+    color: "#00ffcc"
   }).setOrigin(0.5).setInteractive();
 
-  const username = localStorage.getItem("shapeDefenseUser") || "Guest";
+  // Load existing username if saved
+  const savedUser = localStorage.getItem("shapeDefenseUser");
+  if(savedUser){
+    username = savedUser;
+    inputText.setText(username);
+  }
 
-this.add.text(centerX, 40, "Player: " + username, {
-  fontSize:"18px",
-  color:"#00ffcc"
-}).setOrigin(0.5);
+  // Keyboard input
+  this.input.keyboard.on("keydown", (event) => {
 
-  loginBtn.on("pointerdown", ()=>{
+    if(event.key === "Backspace"){
+      username = username.slice(0, -1);
+    }
+    else if(event.key === "Enter"){
+      attemptLogin();
+    }
+    else if(username.length < maxLength && event.key.length === 1){
+      username += event.key;
+    }
 
-  const username = input.value.trim();
-  if(username.length < 3) return;
+    inputText.setText(username);
+  });
 
-  localStorage.setItem("shapeDefenseUser", username);
+  const attemptLogin = () => {
+    if(username.trim().length < 3){
+      errorText.setText("Username must be at least 3 characters.");
+      return;
+    }
 
-  document.body.removeChild(input);
-  this.scene.start("MenuScene");
-});
+    localStorage.setItem("shapeDefenseUser", username.trim());
+    this.scene.start("MenuScene");
+  };
 
+  startBtn.on("pointerdown", attemptLogin);
 };
 
 function MenuScene(){ Phaser.Scene.call(this,{key:"MenuScene"}); }
