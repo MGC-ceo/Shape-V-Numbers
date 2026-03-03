@@ -137,7 +137,8 @@ LoginScene.prototype.create = function(){
   input.style.transform = "translate(-50%, -50%)";
   input.style.padding = "10px";
   input.style.fontSize = "18px";
-
+  input.value = localStorage.getItem("shapeDefenseUser") || "";
+  
   document.body.appendChild(input);
 
   const loginBtn = this.add.text(centerX, 360, "START", {
@@ -326,41 +327,39 @@ SoloScene.prototype.update=function(time){
 
 function spawnWave(scene){
 
-  wave++;
-  waveText.setText("Wave: " + wave);
-
   const isBoss = wave % 5 === 0;
-  
-if(isBoss){
-  startBossMusic(scene);
-} else if(wave % 5 === 1){
-  startGameMusic(scene);
-}
 
-  for(let i=0;i<5+wave;i++){
+  if(isBoss){
+    startBossMusic(scene);
+  } else if(wave % 5 === 1 && wave !== 1){
+    startGameMusic(scene);
+  }
 
-const hp = isBoss ? 150 + wave * 10 : 12 + wave * 3;
-const size = isBoss ? 28 : 14;
-const color = isBoss ? 0xff0000 : 0xff5555;
-const speed = isBoss ? 0.4 : 0.8;
+  for(let i = 0; i < 5 + wave; i++){
 
-   const e = {
-  x: path[0].x,
-  y: path[0].y,
-  hp: hp,
-  speed: speed,
-  pathIndex: 0,
-  alive: true,
-  isBoss: isBoss
-};
+    const hp = isBoss ? 150 + wave * 10 : 12 + wave * 3;
+    const size = isBoss ? 28 : 14;
+    const color = isBoss ? 0xff0000 : 0xff5555;
+    const speed = isBoss ? 0.4 : 0.8;
 
-    e.body=scene.add.circle(e.x,e.y,size,color);
-    e.text=scene.add.text(e.x-10,e.y-12,e.hp,{color:"#fff"});
+    const e = {
+      x: path[0].x,
+      y: path[0].y,
+      hp: hp,
+      speed: speed,
+      pathIndex: 0,
+      alive: true,
+      isBoss: isBoss
+    };
+
+    e.body = scene.add.circle(e.x, e.y, size, color);
+    e.text = scene.add.text(e.x-10, e.y-12, e.hp, {color:"#fff"});
+
     enemies.push(e);
   }
 
+  waveText.setText("Wave: " + wave);
   wave++;
-  waveText.setText("Wave: "+wave);
 }
 
 function moveEnemies(scene){
