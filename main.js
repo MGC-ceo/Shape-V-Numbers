@@ -450,7 +450,7 @@ function damageCrystal(scene,amount){
   scene.cameras.main.shake(200,0.01);
 if(crystalHP<=0){
   stopMusic();
-  saveHighScore(wave);
+  saveHighScore(wave - 1);
   scene.scene.start("MenuScene");
  }
 }
