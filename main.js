@@ -3,8 +3,6 @@ function saveHighScore(score){
   const user = localStorage.getItem("shapeDefenseUser") || "Guest";
 
   const data = JSON.parse(localStorage.getItem("shapeDefenseScores") || "[]");
-
-  Del this Function Beta
   
   data.push({
     user: user,
